@@ -380,7 +380,7 @@ function render(){
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v8</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v9</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -743,7 +743,11 @@ function openSettings(){
    + '<div id="backupBox"></div>'
    + '<div class="note">Je gegevens staan in deze app op dit toestel. Maak af en toe een back-up, dan kun je alles terugzetten of naar je andere telefoon overzetten.</div>'
    + '<div class="label">Back-up terugzetten</div>'
-   + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px"></textarea>'
+   + '<button class="outline" data-act="pickfile">Back-upbestand kiezen</button>'
+   + '<input type="file" id="s_file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'
+   + '<div class="hint">Kies het bestand dat je met de knop hierboven hebt opgeslagen. Zoek in Bestanden onder Downloads.</div>'
+   + '<div class="hint" style="margin-top:14px">Of plak de tekst van je back-up:</div>'
+   + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px;margin-top:6px"></textarea>'
    + '<button class="outline quiet" data-act="import">Terugzetten (overschrijft dit boek)</button>'
    + '<div class="note" id="importMsg"></div>'
    + '<div class="divider"></div>'
@@ -754,11 +758,27 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 8 &middot; augustus 2026</div>'
+   + '<div class="ver">Telefoonboek versie 9 &middot; augustus 2026</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
     var n=num(this.value); if(n>0){S.rate=n;save()}
+  });
+  document.getElementById('s_file').addEventListener('change',function(){
+    var f=this.files&&this.files[0];
+    if(!f)return;
+    var msg=document.getElementById('importMsg');
+    if(msg)msg.textContent='Bestand wordt gelezen…';
+    var lezer=new FileReader();
+    lezer.onload=function(){
+      zetTerug(String(lezer.result||''),
+        'Dit bestand is geen geldige back-up. Kies het bestand dat begint met "telefoonboek".');
+    };
+    lezer.onerror=function(){
+      var m=document.getElementById('importMsg');
+      if(m)m.textContent='Het bestand kon niet gelezen worden. Probeer het opnieuw.';
+    };
+    lezer.readAsText(f);
   });
 }
 
@@ -975,6 +995,27 @@ function openCheck(){
   document.getElementById('c_brand').addEventListener('change',function(){
     S.checkBrand=this.value; save(); openCheck();
   });
+}
+
+/* ── back-up terugzetten, uit een bestand of uit geplakte tekst ── */
+function zetTerug(tekst,foutmelding){
+  var d;
+  try{
+    d=JSON.parse(tekst);
+    if(!d||!Array.isArray(d.items))throw new Error('bad');
+  }catch(e){
+    var m=document.getElementById('importMsg');
+    if(m)m.textContent=foutmelding;
+    return false;
+  }
+  S.items=d.items;
+  if(d.rate)S.rate=d.rate;
+  if(d.checks)S.checks=d.checks;
+  if(d.lang)ui.lang=d.lang;
+  save(); render(); openSettings();
+  var m2=document.getElementById('importMsg');
+  if(m2)m2.textContent=d.items.length+' toestellen teruggezet. Kijk of je winst en je klanten er weer staan.';
+  return true;
 }
 
 /* ── bonnetje voor de klant ── */
@@ -1213,15 +1254,10 @@ document.addEventListener('click',function(e){
     } else b.textContent='Kopiëren lukt niet — gebruik het bestand';
     return;
   }
+  if(act==='pickfile'){document.getElementById('s_file').click();return}
   if(act==='import'){
-    var msg=document.getElementById('importMsg');
-    try{
-      var d=JSON.parse(document.getElementById('s_import').value);
-      if(!d||!Array.isArray(d.items))throw new Error('bad');
-      S.items=d.items; if(d.rate)S.rate=d.rate;
-      save();openSettings();render();
-      document.getElementById('importMsg').textContent=d.items.length+' toestellen teruggezet.';
-    }catch(err){msg.textContent='Deze tekst is geen geldige back-up. Kopieer hem nog een keer helemaal.'}
+    zetTerug(document.getElementById('s_import').value,
+      'Deze tekst is geen geldige back-up. Kopieer hem nog een keer helemaal.');
     return;
   }
 });

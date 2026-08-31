@@ -31,9 +31,9 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 Verhoog het nummer op drie plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `Marokko &middot; v8` in de kop
-2. `index.html` — `Telefoonboek versie 8` onderaan de instellingen
-3. `sw.js` — `telefoonboek-v8`
+1. `index.html` — `Marokko &middot; v9` in de kop
+2. `index.html` — `Telefoonboek versie 9` onderaan de instellingen
+3. `sw.js` — `telefoonboek-v9`
 
 ## Nooit in deze repo
 
