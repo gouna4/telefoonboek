@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Telefoonboek</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Telefoonboek">
+<meta name="theme-color" content="#16120F">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="ICON_URI">
+<link rel="icon" type="image/png" href="ICON_URI">
+<style>
+:root{
+  /* warm leer en zellige in plaats van alles blauw */
+  --night:#16120F; --surface:#211B16; --surface2:#2C2419; --line:#3C3227;
+  --sand:#F4ECE0; --dim:#A8998A;
+  --mint:#4FC08D;      /* jouw eigen cijfers */
+  --azure:#D9744C;     /* samen, en alle knoppen: terracotta */
+  --saffron:#E7AE45;   /* geld dat nog moet komen */
+  --clay:#B8483A;      /* weg / fout */
+  --teal:#4E9E96;      /* op voorraad */
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI Variable','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Roboto Mono',monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--night);color:var(--sand);font-family:var(--sans);
+  font-size:16px;-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.dim{color:var(--dim)}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:0;background:none;color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--azure);outline-offset:2px}
+input,select,textarea{font-family:inherit;font-size:16px}
+.lock{opacity:.65;margin-left:5px;vertical-align:-1px}
+
+.wrap{max-width:480px;margin:0 auto;padding-bottom:124px}
+
+/* ── kop ── */
+.top{position:sticky;top:0;z-index:20;background:var(--night);padding-top:env(safe-area-inset-top)}
+.top-in{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:18px 18px 0}
+.title{font-size:23px;font-weight:700;letter-spacing:-.02em;line-height:1.05}
+.sub{font-size:12px;color:var(--dim);margin-top:3px;letter-spacing:.02em}
+.icon-btn{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:10px;
+  display:flex;align-items:center;justify-content:center}
+.board{display:flex;align-items:baseline;justify-content:space-between;width:100%;padding:14px 18px 12px;font-size:13px}
+.board b{color:var(--saffron);font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:-.01em}
+.zellige{height:8px;
+  background-image:linear-gradient(45deg,var(--line) 25%,transparent 25%,transparent 75%,var(--line) 75%),
+                   linear-gradient(45deg,var(--line) 25%,transparent 25%,transparent 75%,var(--line) 75%);
+  background-size:8px 8px;background-position:0 0,4px 4px;opacity:.75}
+
+.pad{padding:0 18px}
+
+/* ── cijfers bovenaan ── */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px 14px}
+.stat .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim)}
+.stat .v{font-family:var(--mono);font-size:21px;font-weight:600;margin-top:8px;letter-spacing:-.03em;word-break:break-all}
+.stat .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:3px}
+.meta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);margin-top:10px;padding:0 3px}
+
+/* ── de balk voor samen ── */
+.band{position:relative;overflow:hidden;background:linear-gradient(150deg,var(--surface2),var(--surface));
+  border:1px solid var(--azure);border-radius:18px;padding:16px;margin-top:12px}
+.band:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--azure)}
+.band .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--azure);font-weight:600}
+.band .v{font-family:var(--mono);font-size:24px;font-weight:600;margin-top:8px;letter-spacing:-.03em}
+.band .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px;line-height:1.5}
+.band .go{width:100%;margin-top:14px;background:var(--azure);color:#1B1108;border-radius:12px;padding:13px;
+  font-size:14px;font-weight:700;letter-spacing:.01em}
+
+/* ── tabbladen ── */
+.tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin-top:22px}
+.tab{flex:1;border-radius:10px;padding:9px 2px;font-size:13px;font-weight:600;color:var(--dim);letter-spacing:-.01em}
+.tab.on{background:var(--sand);color:var(--night)}
+.search{width:100%;margin-top:12px;background:var(--surface);border:1px solid var(--line);
+  border-radius:13px;padding:11px 14px;color:var(--sand);font-size:14px}
+
+/* ── kaart ── */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:12px;
+  box-shadow:0 1px 0 rgba(255,255,255,.03) inset;animation:rise .24s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.chead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.cname{font-size:17px;font-weight:650;line-height:1.2;letter-spacing:-.02em}
+.cmeta{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.4}
+.pill{flex:0 0 auto;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;white-space:nowrap;
+  text-transform:uppercase;letter-spacing:.06em}
+.pill.sold{background:var(--mint);color:#0C2119;border:1px solid var(--mint)}
+.pill.stock{background:transparent;color:var(--teal);border:1px solid var(--teal)}
+.pill.client{background:var(--saffron);color:#241804;border:1px solid var(--saffron)}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;margin-top:8px}
+.row .r{font-family:var(--mono);text-align:right;letter-spacing:-.01em}
+.win{border-top:1px solid var(--line);padding-top:11px;margin-top:12px}
+.win b{font-family:var(--mono);letter-spacing:-.02em;font-size:15px}
+
+/* ── klant en betaling ── */
+.box{background:var(--night);border:1px solid var(--line);border-radius:14px;padding:13px;margin-top:14px}
+.tiles{display:flex;gap:4px;margin-top:10px}
+.tile{flex:1;height:9px;border-radius:3px;background:var(--line);transition:background .2s}
+.plist{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.pay{display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.pay .x{padding:2px 6px;color:var(--dim)}
+.mini{display:flex;gap:8px;margin-top:12px}
+.mini input{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--line);border-radius:10px;
+  padding:10px;color:var(--sand);font-family:var(--mono);font-size:14px}
+.mini .ok{background:var(--mint);color:#0C2119;border-radius:10px;padding:0 15px;font-weight:700}
+.mini .no{border:1px solid var(--line);border-radius:10px;padding:0 13px;color:var(--dim)}
+.ghost{width:100%;margin-top:12px;border:1px solid var(--teal);color:var(--teal);border-radius:10px;
+  padding:10px;font-size:14px;font-weight:600;background:transparent}
+.cact{display:flex;justify-content:flex-end;align-items:center;gap:2px;margin-top:14px;
+  border-top:1px solid var(--line);padding-top:8px}
+.cact button{font-size:12px;color:var(--dim);padding:8px 10px;border-radius:9px;font-weight:500}
+.cact .danger{background:var(--clay);color:var(--sand);font-weight:700}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:18px;padding:26px;text-align:center;margin-top:12px}
+.empty b{display:block;font-weight:650}
+.empty span{display:block;font-size:14px;color:var(--dim);margin-top:7px}
+
+/* ── onderbalk ── */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(22,18,15,.96);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(8px)}
+.bar-in{max-width:480px;margin:0 auto;padding:12px 18px 16px}
+.bar-in.two{display:flex;gap:8px}
+.bar-in.two .primary{flex:1}
+.bar-in.two .second{flex:0 0 auto;border:1px solid var(--line);color:var(--sand);border-radius:13px;
+  padding:14px 16px;font-size:15px;font-weight:600}
+.primary{width:100%;background:var(--azure);color:#1B1108;border-radius:13px;padding:14px;
+  font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* ── schermen ── */
+.sheet{position:fixed;inset:0;z-index:40;background:var(--night);overflow-y:auto;padding-top:env(safe-area-inset-top)}
+.sheet-in{max-width:480px;margin:0 auto;padding:0 18px 150px}
+.shead{position:sticky;top:0;background:var(--night);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:10px;padding:15px 0;margin:0 -18px;padding-left:18px;z-index:5}
+.shead .t{font-size:18px;font-weight:650;letter-spacing:-.02em}
+.back{font-size:24px;line-height:1;padding:2px 8px}
+.label{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim);margin:22px 0 8px}
+.in{width:100%;background:var(--night);border:1px solid var(--line);border-radius:13px;padding:13px;color:var(--sand)}
+.in.mono{font-family:var(--mono)}
+select.in{appearance:none;-webkit-appearance:none;background-image:none}
+.selwrap{position:relative}
+.selwrap:after{content:'▾';position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--dim);
+  font-size:12px;pointer-events:none}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pair .cap{font-size:11px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.1em}
+.hint{font-size:12px;color:var(--dim);margin-top:7px;line-height:1.5}
+.seg{display:flex;gap:4px;background:var(--night);border:1px solid var(--line);border-radius:13px;padding:4px}
+.seg button{flex:1;border-radius:10px;padding:11px;font-size:14px;font-weight:600;color:var(--dim)}
+.seg button.on-stock{background:var(--teal);color:#08201E}
+.seg button.on-sold{background:var(--mint);color:#0C2119}
+.soldbox{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:4px 15px 18px;margin-top:12px}
+.soldbox .label{margin-top:16px}
+.profit{font-family:var(--mono);font-size:14px;margin-top:11px;line-height:1.7}
+.sbar{position:fixed;left:0;right:0;bottom:0;background:rgba(22,18,15,.96);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(8px)}
+.sbar-in{max-width:480px;margin:0 auto;display:flex;gap:8px;padding:12px 18px 16px}
+.sbar .cancel{border:1px solid var(--line);color:var(--dim);border-radius:13px;padding:14px 18px;font-size:14px;font-weight:600}
+.sbar .save{flex:1;background:var(--azure);color:#1B1108;border-radius:13px;padding:14px;font-size:15px;font-weight:700}
+.outline{width:100%;border:1px solid var(--azure);color:var(--azure);border-radius:13px;padding:12px;
+  font-size:14px;font-weight:600;margin-top:10px;background:transparent}
+.outline.quiet{border-color:var(--line);color:var(--sand)}
+.divider{border-top:1px solid var(--line);margin-top:26px}
+.note{font-size:12px;color:var(--dim);margin-top:11px;line-height:1.55}
+.tip{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:16px;
+  font-size:13px;line-height:1.55}
+.tip .close{float:right;color:var(--dim);padding:0 0 8px 12px}
+.tips{margin-top:10px}
+.tips ul{margin:8px 0 0;padding-left:18px}
+.tips li{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:4px}
+.warn{background:#2E1A14;border:1px solid var(--clay);border-radius:13px;padding:13px;margin-top:12px;font-size:14px;line-height:1.5}
+
+/* ── kosten, codes, vinkjes ── */
+.costrow{display:flex;align-items:center;gap:8px;margin-top:8px}
+.clab{flex:0 0 92px;font-size:13px;color:var(--dim)}
+.costrow input{flex:1;min-width:0}
+.cur{display:flex;gap:3px;background:var(--night);border:1px solid var(--line);border-radius:10px;padding:3px}
+.cur button{padding:7px 10px;border-radius:8px;font-size:13px;font-weight:700;color:var(--dim);font-family:var(--mono)}
+.cur button.on{background:var(--sand);color:var(--night)}
+.segsm{display:flex;gap:6px;margin-top:12px}
+.segsm button{flex:1;border-radius:11px;padding:11px;font-size:14px;font-weight:600;border:1px solid var(--azure);
+  color:var(--azure);background:transparent}
+.segsm button.on{background:var(--azure);color:#1B1108}
+.grp{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--azure);margin:26px 0 4px;font-weight:600}
+.code{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:13px;
+  padding:13px;margin-top:8px;display:block}
+.code b{font-family:var(--mono);font-size:15px;color:var(--saffron);display:block;letter-spacing:.02em}
+.code span{display:block;font-size:13px;color:var(--dim);margin-top:6px;line-height:1.5}
+.chk{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:12px 0;
+  border-bottom:1px solid var(--line);font-size:14px;line-height:1.45}
+.chk .b{flex:0 0 auto;width:23px;height:23px;border-radius:8px;border:1px solid var(--line);display:flex;
+  align-items:center;justify-content:center;font-size:13px;font-weight:700;color:transparent;margin-top:1px}
+.chk.on .b{background:var(--mint);border-color:var(--mint);color:#0C2119}
+.chk.on .t{color:var(--dim);text-decoration:line-through}
+.count{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:16px}
+.pre{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px;
+  font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+  max-height:46vh;overflow:auto;margin-top:12px}
+.ver{font-size:11px;color:var(--dim);text-align:center;margin-top:26px}
+
+/* ── slot ── */
+.lockscreen{position:fixed;inset:0;z-index:60;background:var(--night);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:32px 24px calc(32px + env(safe-area-inset-bottom))}
+.lockscreen .lg{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.lockscreen .ls{font-size:13px;color:var(--dim);margin-top:8px;text-align:center;line-height:1.5}
+.dots{display:flex;gap:14px;margin:32px 0 8px;height:16px;align-items:center}
+.dot{width:13px;height:13px;border-radius:50%;border:1px solid var(--line);transition:all .15s}
+.dot.on{background:var(--azure);border-color:var(--azure);transform:scale(1.1)}
+.dots.bad .dot{border-color:var(--clay);background:var(--clay)}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.keys{display:grid;grid-template-columns:repeat(3,76px);gap:14px;margin-top:26px}
+.key{height:76px;border-radius:50%;border:1px solid var(--line);background:var(--surface);
+  font-size:26px;font-weight:500;font-family:var(--mono);display:flex;align-items:center;justify-content:center}
+.key:active{background:var(--surface2)}
+.key.wide{font-size:14px;font-weight:600;border-color:transparent;background:transparent;color:var(--dim);font-family:var(--sans)}
+.eye{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:10px;
+  display:flex;align-items:center;justify-content:center}
+.eye.on{border-color:var(--saffron);color:var(--saffron)}
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="sheet"></div>
+<div id="lock"></div>
+
+<script>
+/* ── data ── */
+var KEY='telefoonboek_v1';
+var CATALOG={
+ 'iPhone':['11','11 Pro','11 Pro Max','SE (2020)','12 mini','12','12 Pro','12 Pro Max','13 mini','13','13 Pro','13 Pro Max','SE (2022)','14','14 Plus','14 Pro','14 Pro Max','15','15 Plus','15 Pro','15 Pro Max','16e','16','16 Plus','16 Pro','16 Pro Max'],
+ 'Samsung':['Galaxy S21','Galaxy S21+','Galaxy S21 Ultra','Galaxy S21 FE','Galaxy S22','Galaxy S22+','Galaxy S22 Ultra','Galaxy S23','Galaxy S23 FE','Galaxy S23+','Galaxy S23 Ultra','Galaxy S24','Galaxy S24 FE','Galaxy S24+','Galaxy S24 Ultra','Galaxy S25','Galaxy S25+','Galaxy S25 Ultra','Galaxy Z Flip 3','Galaxy Z Flip 4','Galaxy Z Flip 5','Galaxy Z Flip 6','Galaxy Z Fold 3','Galaxy Z Fold 4','Galaxy Z Fold 5','Galaxy Z Fold 6','Galaxy Note 20','Galaxy Note 20 Ultra','Galaxy A15','Galaxy A25','Galaxy A34','Galaxy A35','Galaxy A54','Galaxy A55','Galaxy A56'],
+ 'Xiaomi':['12','12 Pro','13','13 Pro','14','14 Pro','14 Ultra','15','15 Ultra','Redmi Note 12 Pro','Redmi Note 13 Pro','Redmi Note 14 Pro','Poco X5 Pro','Poco X6 Pro','Poco X7 Pro','Poco F5','Poco F6','Poco F7'],
+ 'Google Pixel':['6','6a','6 Pro','7','7a','7 Pro','8','8a','8 Pro','9','9 Pro','9 Pro XL','10','10 Pro'],
+ 'OnePlus':['9','9 Pro','10 Pro','11','12','12R','13','Nord 3','Nord 4','Nord CE 4'],
+ 'Oppo':['Reno 8','Reno 10','Reno 11','Reno 12','Find X5 Pro','Find X6 Pro','Find X8 Pro','A78','A98'],
+ 'Huawei':['P30 Pro','P40 Pro','P50 Pro','P60 Pro','Mate 40 Pro','Mate 50 Pro','Nova 11','Nova 12'],
+ 'Honor':['90','200','200 Pro','Magic 5 Pro','Magic 6 Pro','X8b','X9b'],
+ 'Realme':['11 Pro','11 Pro+','12 Pro+','GT 6','C55','C67'],
+ 'Motorola':['Edge 40','Edge 50 Pro','G54','G84','Razr 40 Ultra','Razr 50 Ultra'],
+ 'Nothing':['Phone (1)','Phone (2)','Phone (2a)','Phone (3a)','Phone (3)'],
+ 'Anders':[]
+};
+var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
+
+var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false};
+var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false};
+
+function load(){
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var d=JSON.parse(raw);
+      if(d.rate)S.rate=d.rate;
+      if(Array.isArray(d.items))S.items=d.items;
+      if(d.checks)S.checks=d.checks;
+      if(d.checkBrand)S.checkBrand=d.checkBrand;
+      if(d.lang)ui.lang=d.lang;
+      if(d.lastBackup)S.lastBackup=d.lastBackup;
+      if(d.pin)S.pin=d.pin;
+      if(d.hide)S.hide=d.hide;
+    }
+    ui.tipOff=localStorage.getItem(KEY+'_tip')==='1';
+  }catch(e){}
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,pin:S.pin,hide:S.hide}));ui.msg='';return true;}
+  catch(e){ui.msg='Opslaan lukte niet. Maak ruimte vrij op je telefoon of maak eerst een back-up.';return false;}
+}
+
+/* ── rekenen en tonen ── */
+function uid(){return Math.random().toString(36).slice(2,10)}
+function num(v){if(typeof v==='number')return isFinite(v)?v:0;var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.'));return isFinite(n)?n:0}
+function eur(n){return '€ '+(n||0).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function mad(n){return (n||0).toLocaleString('nl-NL',{maximumFractionDigits:0})+' DH'}
+function toEUR(a,cur){return cur==='MAD'?num(a)/(S.rate||1):num(a)}
+function toMAD(a,cur){return cur==='MAD'?num(a):num(a)*(S.rate||1)}
+function today(){return new Date().toISOString().slice(0,10)}
+function dateNL(s){if(!s)return '';var d=new Date(s);if(isNaN(d))return '';return d.toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}
+function paidEUR(it){return (it.payments||[]).reduce(function(s,p){return s+toEUR(p.amount,p.cur)},0)}
+/* privécijfer: verborgen als het oog uit staat */
+function pv(s){return S.hide?'••••':s}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+function comma(n,d){return n.toFixed(d).replace('.',',')}
+function standalone(){
+  try{
+    if(window.navigator.standalone===true)return true;
+    if(window.matchMedia)return window.matchMedia('(display-mode: standalone)').matches;
+  }catch(e){}
+  return false;
+}
+
+function lock(){return '<svg class="lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'}
+
+/* transport en onderdelen: alleen jouw kosten */
+function kostenEUR(it){return toEUR(it.costT,it.costTCur||'EUR')+toEUR(it.costP,it.costPCur||'EUR')}
+
+/* prijs die de collega kent; niet ingevuld = jouw echte inkoop */
+function doorEUR(it){var v=num(it.told);return v>0?toEUR(it.told,it.toldCur||'MAD'):toEUR(it.buy,it.buyCur)}
+
+function statusOf(it){
+  if(!it.sold)return 'stock';
+  var rest=toEUR(it.sell,it.sellCur)-paidEUR(it);
+  return rest>0.01?'client':'paid';
+}
+var STATUSLABEL={stock:'Op voorraad',client:'Bij klant',paid:'Betaald'};
+
+function totals(){
+  var t={mijn:0,onze:0,open:0,invest:0,voorraad:0,verkocht:0,bijklant:0};
+  S.items.forEach(function(it){
+    var inkoop=toEUR(it.buy,it.buyCur), door=doorEUR(it), kost=kostenEUR(it);
+    if(it.sold){
+      t.verkocht++;
+      var uit=toEUR(it.sell,it.sellCur);
+      t.mijn+=uit-inkoop-kost; t.onze+=uit-door;
+      t.open+=Math.max(0,uit-paidEUR(it));
+      if(statusOf(it)==='client')t.bijklant++;
+    } else {t.voorraad++;t.invest+=inkoop+kost;}
+  });
+  return t;
+}
+
+/* ── cijferslot ── */
+var pinBuf='', pinMode=null, pinFirst='', locked=false;
+function hashPin(p){
+  var s='tb9:'+p, x=0x811c9dc5, y=0x1234567;
+  for(var i=0;i<s.length;i++){x^=s.charCodeAt(i);x=(x*16777619)>>>0}
+  for(var j=s.length-1;j>=0;j--){y^=s.charCodeAt(j);y=(y*31+7)>>>0}
+  return x.toString(16)+'-'+y.toString(16);
+}
+function lockScreen(kop,sub){
+  var h='<div class="lockscreen"><div class="lg">'+esc(kop)+'</div><div class="ls">'+esc(sub)+'</div><div class="dots" id="dots">';
+  for(var i=0;i<4;i++)h+='<span class="dot'+(i<pinBuf.length?' on':'')+'"></span>';
+  h+='</div><div class="keys">';
+  [1,2,3,4,5,6,7,8,9].forEach(function(n){h+='<button class="key" data-act="pinkey" data-n="'+n+'">'+n+'</button>'});
+  h+='<button class="key wide" data-act="pinclear">wissen</button>'
+   + '<button class="key" data-act="pinkey" data-n="0">0</button><span></span></div>';
+  h+= pinMode===null
+    ? '<button class="key wide" style="margin-top:22px" data-act="pinforgot">Code vergeten?</button>'
+    : '<button class="key wide" style="margin-top:22px" data-act="pincancel">Annuleren</button>';
+  h+='</div>';
+  document.getElementById('lock').innerHTML=h;
+}
+function lockKop(){var e=document.querySelector('.lockscreen .lg');return e?e.textContent:'Telefoonboek'}
+function lockSub(){var e=document.querySelector('.lockscreen .ls');return e?e.textContent:''}
+function askPin(){pinBuf='';pinMode=null;lockScreen('Telefoonboek','Voer je code van vier cijfers in')}
+function pinDone(){
+  if(pinMode===null){
+    if(hashPin(pinBuf)===S.pin){document.getElementById('lock').innerHTML='';locked=false;render();}
+    else{
+      var dots=document.getElementById('dots');
+      if(dots)dots.className='dots bad shake';
+      setTimeout(function(){pinBuf='';lockScreen('Telefoonboek','Die code klopt niet. Probeer het nog eens.')},450);
+    }
+  } else if(pinMode==='new'){
+    pinFirst=pinBuf;pinBuf='';pinMode='again';lockScreen('Nog een keer','Voer dezelfde code opnieuw in');
+  } else if(pinMode==='again'){
+    if(pinBuf===pinFirst){S.pin=hashPin(pinBuf);save();pinMode=null;document.getElementById('lock').innerHTML='';render();openSettings();}
+    else{pinBuf='';pinMode='new';lockScreen('Niet gelijk','De twee codes waren niet hetzelfde. Kies opnieuw.')}
+  } else if(pinMode==='off'){
+    if(hashPin(pinBuf)===S.pin){S.pin='';save();pinMode=null;document.getElementById('lock').innerHTML='';render();openSettings();}
+    else{pinBuf='';lockScreen('Slot uitzetten','Die code klopt niet. Probeer het nog eens.')}
+  }
+}
+
+/* ── hoofdscherm ── */
+function render(){
+  if(locked){document.getElementById('app').innerHTML='';return}
+  var t=totals();
+  var list=S.items.filter(function(it){return ui.tab==='all'?true:statusOf(it)===ui.tab})
+    .filter(function(it){
+      var q=ui.q.trim().toLowerCase();
+      if(!q)return true;
+      return [it.brand,it.model,it.storage,it.customer,it.note].join(' ').toLowerCase().indexOf(q)>-1;
+    })
+    .sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''))});
+
+  var h='';
+  h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v8</div></div>'
+   + '<div style="display:flex;gap:7px">'
+   + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
+   + (S.hide
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 002.8 2.8"/><path d="M6.5 6.6C4.6 7.9 3.2 9.8 2.5 12c1.5 4 5.3 6.5 9.5 6.5 1.5 0 2.9-.3 4.2-.9M17.9 17A11 11 0 0021.5 12C20 8 16.2 5.5 12 5.5"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 12C4 8 7.8 5.5 12 5.5S20 8 21.5 12C20 16 16.2 18.5 12 18.5S4 16 2.5 12z"/><circle cx="12" cy="12" r="2.6"/></svg>')
+   + '</button>'
+   + (S.pin?'<button class="icon-btn" data-act="lock" aria-label="Op slot"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4ECE0" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></button>':'')
+   + '<button class="icon-btn" data-act="settings" aria-label="Instellingen">'
+   + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4ECE0" stroke-width="2" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.4" fill="#16120F"/><circle cx="16" cy="16" r="2.4" fill="#16120F"/></svg>'
+   + '</button></div></div>'
+   + '<button class="board" data-act="settings"><b>1 &euro; = '+comma(S.rate,2)+' DH</b><span class="dim" style="font-size:12px">koers aanpassen</span></button>'
+   + '<div class="zellige"></div></div>';
+
+  h+='<div class="pad"><div class="stats">'
+   + '<div class="stat"><div class="k">Mijn winst'+lock()+'</div><div class="v" style="color:'+(t.mijn>=0?'var(--mint)':'var(--clay)')+'">'+pv(eur(t.mijn))+'</div><div class="s">'+pv(mad(t.mijn*S.rate))+'</div></div>'
+   + '<div class="stat"><div class="k">Geïnvesteerd'+lock()+'</div><div class="v">'+pv(eur(t.invest))+'</div><div class="s">'+t.voorraad+' op voorraad</div></div>'
+   + '</div>'
+   + '<div class="band"><div class="k">Onze winst samen</div><div class="v">'+mad(t.onze*S.rate)+'</div>'
+   + '<div class="s">'+eur(t.onze)+' &middot; gerekend met de doorgegeven prijzen</div>'
+   + '<div class="segsm"><button class="'+(ui.lang==='ar'?'on':'')+'" data-act="lang" data-l="ar">عربي</button>'
+   + '<button class="'+(ui.lang==='nl'?'on':'')+'" data-act="lang" data-l="nl">Nederlands</button></div>'
+   + '<button class="go" data-act="share">Doorgeven via WhatsApp</button></div>'
+   + '<div class="meta"><span>'+t.verkocht+' verkocht &middot; '+t.bijklant+' bij klant</span>'
+   + '<span>'+(t.open>0.01?('nog te krijgen '+mad(t.open*S.rate)):'niets openstaand')+'</span></div>';
+
+  if(ui.msg) h+='<div class="warn">'+esc(ui.msg)+'</div>';
+
+  if(!standalone() && !ui.tipOff){
+    h+='<div class="tip"><button class="close" data-act="tipoff" aria-label="Sluiten">&times;</button>'
+     + '<b>Zet hem op je beginscherm</b><br>iPhone: deelknop onderin &rarr; <b>Zet op beginscherm</b>. '
+     + 'Samsung: menu &#8942; &rarr; <b>Toevoegen aan startscherm</b>. Daarna opent hij als een echte app.</div>';
+  }
+
+  h+='<div class="tabs">'
+   + tabBtn('all','Alles')+tabBtn('stock','Voorraad')+tabBtn('client','Bij klant')+tabBtn('paid','Betaald')
+   + '</div>';
+  if(S.items.length>5) h+='<input class="search" id="q" placeholder="Zoek op model of klant" value="'+esc(ui.q)+'">';
+  h+='</div><div class="pad">';
+
+  if(!list.length){
+    h+='<div class="empty"><b>Nog geen telefoons hier</b><span>Voeg je eerste toestel toe met de knop onderin.</span></div>';
+  } else {
+    list.forEach(function(it){h+=card(it)});
+  }
+  h+='</div>';
+
+  document.getElementById('app').innerHTML='<div class="wrap">'+h+'</div>'
+   + '<div class="bar"><div class="bar-in two"><button class="second" data-act="check">Controleren</button>'
+   + '<button class="primary" data-act="new">+ Telefoon</button></div></div>';
+
+  var q=document.getElementById('q');
+  if(q){q.addEventListener('input',function(){ui.q=q.value;var p=q.selectionStart;render();var n=document.getElementById('q');if(n){n.focus();n.setSelectionRange(p,p)}});}
+  var pf=document.getElementById('payinput');
+  if(pf)pf.focus();
+}
+
+function tabBtn(k,label){return '<button class="tab'+(ui.tab===k?' on':'')+'" data-act="tab" data-k="'+k+'">'+label+'</button>'}
+
+function card(it){
+  var inkoop=toEUR(it.buy,it.buyCur), verkoop=toEUR(it.sell,it.sellCur);
+  var kost=kostenEUR(it);
+  var winst=verkoop-inkoop-kost, betaald=paidEUR(it), rest=Math.max(0,verkoop-betaald);
+  var pct=verkoop>0?betaald/verkoop*100:0, klaar=it.sold&&verkoop>0&&rest<0.01;
+  var h='<div class="card">';
+  h+='<div class="chead"><div><div class="cname">'+esc(it.brand)+' '+esc(it.model)+'</div><div class="cmeta">'
+   + [it.storage?esc(it.storage):'',
+      num(it.battery)>0?('accu <b style="font-weight:600;color:'+(it.battery>=90?'var(--mint)':(it.battery>=80?'var(--saffron)':'var(--clay)'))+'">'+num(it.battery)+'%</b>'):'',
+      it.sold?('verkocht '+dateNL(it.soldAt)):('ingekocht '+dateNL(it.boughtAt))].filter(Boolean).join(' &middot; ')
+   + '</div></div><button class="pill '+({stock:'stock',client:'client',paid:'sold'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
+
+  var door=doorEUR(it), marge=door-inkoop, onze=verkoop-door;
+  h+='<div class="row"><span class="dim">Inkoop'+lock()+'</span><span class="r">'+pv(eur(inkoop)+' <span class="dim">&middot; '+mad(inkoop*S.rate)+'</span>')+'</span></div>';
+  if(num(it.told)>0){
+    h+='<div class="row"><span class="dim">Doorgegeven</span><span class="r">'+mad(door*S.rate)+' <span class="dim">&middot; '+eur(door)+'</span></span></div>';
+    if(Math.abs(marge)>0.005)
+      h+='<div class="row" style="margin-top:4px"><span class="dim" style="font-size:12px">eigen marge'+lock()+'</span><span class="r dim" style="font-size:12px">'+pv(eur(marge)+' &middot; '+mad(marge*S.rate))+'</span></div>';
+  }
+  if(kost>0.005){
+    var deel=[];
+    if(num(it.costT)>0)deel.push('transport '+eur(toEUR(it.costT,it.costTCur||'EUR')));
+    if(num(it.costP)>0)deel.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(toEUR(it.costP,it.costPCur||'EUR')));
+    h+='<div class="row"><span class="dim">Kosten'+lock()+'</span><span class="r">'+pv(eur(kost)+' <span class="dim">&middot; '+mad(kost*S.rate)+'</span>')+'</span></div>';
+    if(!S.hide)h+='<div class="row" style="margin-top:3px"><span class="dim" style="font-size:12px">'+deel.join(' &middot; ')+'</span><span></span></div>';
+  }
+  if(it.sold){
+    h+='<div class="row"><span class="dim">Verkoop</span><span class="r">'+eur(verkoop)+' <span class="dim">&middot; '+mad(verkoop*S.rate)+'</span></span></div>';
+    h+='<div class="row win"><span style="font-weight:500">Mijn winst'+lock()+'</span><span class="r"><b style="color:'+(winst>=0?'var(--mint)':'var(--clay)')+'">'
+     + pv((winst<0?'&minus; ':'+ ')+eur(Math.abs(winst)))+'</b> <span class="dim">'+(S.hide?'':'&middot; '+mad(Math.abs(winst)*S.rate))+'</span></span></div>';
+    h+='<div class="row"><span style="font-weight:500;color:var(--azure)">Onze winst</span><span class="r"><b style="color:var(--azure)">'
+     + mad(onze*S.rate)+'</b> <span class="dim">&middot; '+eur(onze)+'</span></span></div>';
+
+    h+='<div class="box"><div class="row" style="margin-top:0"><span style="font-weight:500">'+(esc(it.customer)||'Klant')+'</span>'
+     + '<span class="mono" style="font-size:12px;color:'+(klaar?'var(--mint)':'var(--saffron)')+'">'+(klaar?'volledig betaald':'nog '+mad(rest*S.rate))+'</span></div>';
+    h+='<div class="tiles">';
+    var filled=Math.max(0,Math.min(10,Math.round(pct/10)));
+    for(var i=0;i<10;i++)h+='<span class="tile"'+(i<filled?' style="background:'+(klaar?'var(--mint)':'var(--saffron)')+'"':'')+'></span>';
+    h+='</div>';
+    h+='<div class="mono dim" style="font-size:12px;margin-top:9px">'+mad(betaald*S.rate)+' / '+mad(verkoop*S.rate)+' betaald</div>';
+    if((it.payments||[]).length){
+      h+='<div class="plist">';
+      it.payments.forEach(function(p){
+        h+='<div class="pay"><span class="dim">'+dateNL(p.date)+'</span><span><span class="mono">'
+         + (p.cur==='MAD'?mad(p.amount):eur(p.amount))+'</span><button class="x" data-act="delpay" data-id="'+it.id+'" data-pid="'+p.id+'" aria-label="Betaling verwijderen">&times;</button></span></div>';
+      });
+      h+='</div>';
+    }
+    if(ui.payFor===it.id){
+      h+='<div class="mini"><input id="payinput" inputmode="decimal" placeholder="bedrag in '+(it.sellCur==='MAD'?'DH':'\u20ac')+'">'
+       + '<button class="ok" data-act="addpay" data-id="'+it.id+'">Zet erbij</button>'
+       + '<button class="no" data-act="cancelpay">&times;</button></div>';
+    } else if(!klaar){
+      h+='<button class="ghost" data-act="pay" data-id="'+it.id+'">Betaling toevoegen</button>';
+    }
+    h+='</div>';
+  }
+  if(it.imei)h+='<div class="mono dim" style="font-size:11px;margin-top:12px">IMEI '+esc(it.imei)+'</div>';
+  if(it.note)h+='<div class="dim" style="font-size:12px;margin-top:'+(it.imei?'5':'12')+'px">'+esc(it.note)+'</div>';
+
+  h+='<div class="cact">';
+  if(it.sold)h+='<button data-act="receipt" data-id="'+it.id+'" style="color:var(--azure)">Bonnetje</button>';
+  h+='<button data-act="edit" data-id="'+it.id+'">Bewerken</button>';
+  if(ui.confirmDel===it.id){
+    h+='<button class="danger" data-act="del" data-id="'+it.id+'">Definitief weg</button><button data-act="undel">Terug</button>';
+  } else {
+    h+='<button data-act="askdel" data-id="'+it.id+'" aria-label="Verwijderen">'
+     + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A8998A" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>';
+  }
+  h+='</div></div>';
+  return h;
+}
+
+/* ── formulier ── */
+function options(arr,sel){return arr.map(function(o){return '<option value="'+esc(o)+'"'+(o===sel?' selected':'')+'>'+esc(o)+'</option>'}).join('')}
+
+function costRow(label,id,val,cur,key){
+  return '<div class="costrow"><span class="clab">'+label+'</span>'
+   + '<input class="in mono" id="'+id+'" inputmode="decimal" placeholder="0" value="'+esc(val)+'">'
+   + '<span class="cur"><button data-act="curtoggle" data-f="'+key+'" data-i="'+id+'" data-v="EUR" class="'+(cur==='EUR'?'on':'')+'">€</button>'
+   + '<button data-act="curtoggle" data-f="'+key+'" data-i="'+id+'" data-v="MAD" class="'+(cur==='MAD'?'on':'')+'">DH</button></span></div>';
+}
+
+function openForm(item){
+  var it=item||null;
+  var known=it?!!CATALOG[it.brand]:true;
+  var brand=it?(known?it.brand:'Anders'):'iPhone';
+  var model=it?(known?it.model:''):'13 Pro Max';
+  var buyCur=it?it.buyCur:'EUR', sellCur=it?(it.sellCur||'MAD'):'MAD';
+  var buyE=it&&it.buy?comma(toEUR(it.buy,it.buyCur),2):'';
+  var buyM=it&&it.buy?String(Math.round(toMAD(it.buy,it.buyCur))):'';
+  var selE=it&&it.sell?comma(toEUR(it.sell,it.sellCur),2):'';
+  var selM=it&&it.sell?String(Math.round(toMAD(it.sell,it.sellCur))):'';
+  var sold=it?!!it.sold:false;
+  var toldCur=it?(it.toldCur||'MAD'):'MAD';
+  var toldM=it&&num(it.told)>0?String(Math.round(toMAD(it.told,toldCur))):'';
+  var toldE=it&&num(it.told)>0?comma(toEUR(it.told,toldCur),2):'';
+
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">'+(it?'Telefoon bewerken':'Nieuwe telefoon')+'</div></div>';
+
+  h+='<div class="label">Merk</div><div class="selwrap"><select class="in" id="f_brand">'+options(Object.keys(CATALOG),brand)+'</select></div>';
+  h+='<div id="typeSlot"></div>';
+  h+='<div class="label">Opslag</div><div class="selwrap"><select class="in" id="f_storage"><option value="">Niet ingevuld</option>'+options(STORAGES,it?it.storage:'')+'</select></div>';
+
+  h+='<div class="pair" style="margin-top:20px">'
+   + '<div><div class="cap">Accu %</div><input class="in mono" id="f_battery" inputmode="numeric" placeholder="bv. 87" value="'+esc(it&&num(it.battery)>0?String(num(it.battery)):'')+'"></div>'
+   + '<div><div class="cap">IMEI</div><input class="in mono" id="f_imei" inputmode="numeric" placeholder="*#06#" value="'+esc(it?(it.imei||''):'')+'"></div>'
+   + '</div>';
+
+  h+='<div class="label">Inkoopprijs</div><div class="pair">'
+   + '<div><div class="cap">Euro</div><input class="in mono" id="f_buyE" inputmode="decimal" placeholder="0,00" value="'+esc(buyE)+'"></div>'
+   + '<div><div class="cap">Dirham</div><input class="in mono" id="f_buyM" inputmode="decimal" placeholder="0" value="'+esc(buyM)+'"></div>'
+   + '</div><div class="hint">Vul één vakje in, het andere rekent mee. Dit cijfer blijft tussen jou en dit boek.</div>';
+
+  h+='<div class="label">Doorgegeven inkoop</div><div class="pair">'
+   + '<div><div class="cap">Dirham</div><input class="in mono" id="f_toldM" inputmode="decimal" placeholder="0" value="'+esc(toldM)+'"></div>'
+   + '<div><div class="cap">Euro</div><input class="in mono" id="f_toldE" inputmode="decimal" placeholder="0,00" value="'+esc(toldE)+'"></div>'
+   + '</div><div class="hint">Wat je collega denkt dat je betaald hebt. Leeg laten = zelfde als je echte inkoop.</div>';
+
+  h+='<div class="label">Kosten'+lock()+'</div>'
+   + costRow('Transport','f_costT',it&&num(it.costT)>0?comma(num(it.costT),2):'',it?(it.costTCur||'EUR'):'EUR','costT')
+   + costRow('Onderdelen','f_costP',it&&num(it.costP)>0?comma(num(it.costP),2):'',it?(it.costPCur||'EUR'):'EUR','costP')
+   + '<input class="in" id="f_costWhat" style="margin-top:8px" placeholder="wat is vervangen? bv. scherm, accu" value="'+esc(it?(it.costWhat||''):'')+'">'
+   + '<div class="hint">Verzending, reis, een nieuw scherm of accu. Dit gaat van jouw winst af en blijft uit de winst samen. '
+   + 'Wil je dat je collega meebetaalt, tel het dan op bij de doorgegeven inkoop.</div>';
+
+  h+='<div class="label">Ingekocht op</div><input class="in" type="date" id="f_bought" value="'+esc(it?(it.boughtAt||today()):today())+'">';
+
+  h+='<div class="label">Status</div><div class="seg" id="f_seg">'
+   + '<button data-sold="0" class="'+(!sold?'on-stock':'')+'">Op voorraad</button>'
+   + '<button data-sold="1" class="'+(sold?'on-sold':'')+'">Verkocht</button></div>';
+
+  h+='<div id="soldBox" '+(sold?'':'hidden')+'><div class="soldbox">'
+   + '<div class="label">Verkoopprijs</div><div class="pair">'
+   + '<div><div class="cap">Euro</div><input class="in mono" id="f_selE" inputmode="decimal" placeholder="0,00" value="'+esc(selE)+'"></div>'
+   + '<div><div class="cap">Dirham</div><input class="in mono" id="f_selM" inputmode="decimal" placeholder="0" value="'+esc(selM)+'"></div>'
+   + '</div><div class="profit" id="f_profit"></div>'
+   + '<div class="label">Klant</div><input class="in" id="f_customer" placeholder="naam" value="'+esc(it?it.customer:'')+'">'
+   + '<div class="label">Nummer klant</div><input class="in mono" id="f_phone" inputmode="tel" placeholder="06… of 2126…" value="'+esc(it?(it.phone||''):'')+'">'
+   + '<div class="hint">Voor het bonnetje via WhatsApp. Een 06-nummer reken ik als Marokkaans (+212).</div>'
+   + '<div class="label">Nu al betaald</div><input class="in mono" id="f_firstpay" inputmode="decimal" placeholder="0">'
+   + '<div class="hint">Latere betalingen zet je er op de kaart bij.</div>'
+   + '<div class="label">Verkocht op</div><input class="in" type="date" id="f_sold" value="'+esc(it?(it.soldAt||today()):today())+'">'
+   + '</div></div>';
+
+  h+='<div class="label">Notitie</div><input class="in" id="f_note" placeholder="kleur, IMEI, staat, batterij…" value="'+esc(it?it.note:'')+'">';
+  h+='</div><div class="sbar"><div class="sbar-in"><button class="cancel" data-act="close">Annuleren</button>'
+   + '<button class="save" data-act="savephone">Opslaan</button></div></div></div>';
+
+  var el=document.getElementById('sheet');
+  el.innerHTML=h;
+  el.dataset.id=it?it.id:'';
+  el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.sold=sold?'1':'0'; el.dataset.toldCur=toldCur;
+  el.dataset.costTCur=it?(it.costTCur||'EUR'):'EUR'; el.dataset.costPCur=it?(it.costPCur||'EUR'):'EUR';
+  el.dataset.payments=JSON.stringify(it&&it.payments?it.payments:[]);
+  el.dataset.created=it?(it.createdAt||''):'';
+
+  var brandSel=document.getElementById('f_brand');
+  function drawType(){
+    var b=brandSel.value, slot=document.getElementById('typeSlot');
+    if(b==='Anders'){
+      slot.innerHTML='<div class="pair"><div><div class="label" style="margin-top:20px">Merknaam</div>'
+       + '<input class="in" id="f_brandFree" placeholder="bv. Vivo" value="'+esc(it&&!known?it.brand:'')+'"></div>'
+       + '<div><div class="label" style="margin-top:20px">Type</div>'
+       + '<input class="in" id="f_modelFree" placeholder="bv. V30" value="'+esc(it&&!known?it.model:'')+'"></div></div>';
+    } else {
+      var arr=CATALOG[b]||[];
+      var cur=(arr.indexOf(model)>-1)?model:arr[0];
+      slot.innerHTML='<div class="label">Type</div><div class="selwrap"><select class="in" id="f_model">'+options(arr,cur)+'</select></div>';
+    }
+  }
+  drawType();
+  brandSel.addEventListener('change',function(){model='';drawType()});
+
+  function pair(a,b,cur,rev){
+    var A=document.getElementById(a),B=document.getElementById(b);
+    if(!A||!B)return;
+    A.addEventListener('input',function(){
+      el.dataset[cur]=rev?'MAD':'EUR';
+      B.value=A.value===''?'':(rev?comma(num(A.value)/(S.rate||1),2):String(Math.round(num(A.value)*S.rate)));
+      profit();
+    });
+  }
+  pair('f_buyE','f_buyM','buyCur',false);
+  pair('f_buyM','f_buyE','buyCur',true);
+  pair('f_selE','f_selM','sellCur',false);
+  pair('f_selM','f_selE','sellCur',true);
+  pair('f_toldM','f_toldE','toldCur',true);
+  pair('f_toldE','f_toldM','toldCur',false);
+  ['f_costT','f_costP'].forEach(function(id){
+    var f=document.getElementById(id);
+    if(f)f.addEventListener('input',profit);
+  });
+
+  function profit(){
+    var p=document.getElementById('f_profit'); if(!p)return;
+    var bE=num((document.getElementById('f_buyE')||{}).value);
+    var tE=num((document.getElementById('f_toldE')||{}).value);
+    var dE=tE>0?tE:bE;
+    var sE=num((document.getElementById('f_selE')||{}).value);
+    var kEUR=0;
+    ['costT','costP'].forEach(function(k){
+      var f=document.getElementById(k==='costT'?'f_costT':'f_costP');
+      if(f)kEUR+=(el.dataset[k+'Cur']==='MAD'?num(f.value)/(S.rate||1):num(f.value));
+    });
+    var m=sE-bE-kEUR, o=sE-dE;
+    p.innerHTML='<span style="color:'+(m>=0?'var(--mint)':'var(--clay)')+'">mijn winst '+eur(m)+' &middot; '+mad(m*S.rate)+'</span>'
+      + '<br><span style="color:var(--azure)">onze winst '+mad(o*S.rate)+' &middot; '+eur(o)+'</span>';
+  }
+  profit();
+
+  document.getElementById('f_seg').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    var s=b.dataset.sold==='1';
+    el.dataset.sold=s?'1':'0';
+    var btns=this.querySelectorAll('button');
+    btns[0].className=s?'':'on-stock';
+    btns[1].className=s?'on-sold':'';
+    document.getElementById('soldBox').hidden=!s;
+    profit();
+  });
+}
+
+function savePhone(){
+  var el=document.getElementById('sheet');
+  var brand=document.getElementById('f_brand').value;
+  var bFree=document.getElementById('f_brandFree'), mFree=document.getElementById('f_modelFree');
+  var mSel=document.getElementById('f_model');
+  var finalBrand=brand==='Anders'?((bFree&&bFree.value.trim())||'Anders'):brand;
+  var finalModel=brand==='Anders'?(mFree?mFree.value.trim():''):(mSel?mSel.value:'');
+  var sold=el.dataset.sold==='1';
+  var buyCur=el.dataset.buyCur||'EUR', sellCur=el.dataset.sellCur||'MAD';
+  var buy=buyCur==='MAD'?num(document.getElementById('f_buyM').value):num(document.getElementById('f_buyE').value);
+  var sell=0;
+  if(sold){
+    var sm=document.getElementById('f_selM'), se=document.getElementById('f_selE');
+    sell=sellCur==='MAD'?num(sm.value):num(se.value);
+  }
+  var payments=[];
+  try{payments=JSON.parse(el.dataset.payments||'[]')}catch(e){}
+  if(sold){
+    var fp=document.getElementById('f_firstpay');
+    if(fp&&num(fp.value)>0)payments=payments.concat([{id:uid(),date:today(),amount:num(fp.value),cur:sellCur}]);
+  } else payments=[];
+
+  var toldCur=el.dataset.toldCur||'MAD';
+  var tM=document.getElementById('f_toldM'), tE=document.getElementById('f_toldE');
+  var told=toldCur==='MAD'?num(tM?tM.value:0):num(tE?tE.value:0);
+
+  var cT=document.getElementById('f_costT'), cP=document.getElementById('f_costP');
+
+  var base={
+    brand:finalBrand, model:finalModel, told:told, toldCur:toldCur,
+    costT:num(cT?cT.value:0), costTCur:el.dataset.costTCur||'EUR',
+    costP:num(cP?cP.value:0), costPCur:el.dataset.costPCur||'EUR',
+    costWhat:(function(e){return e?e.value.trim():''})(document.getElementById('f_costWhat')),
+    battery:num((document.getElementById('f_battery')||{}).value),
+    imei:((document.getElementById('f_imei')||{}).value||'').trim(),
+    phone:(((document.getElementById('f_phone')||{}).value||'').trim()),
+    storage:document.getElementById('f_storage').value,
+    buy:buy, buyCur:buyCur, sold:sold, sell:sell, sellCur:sellCur,
+    customer:sold?(document.getElementById('f_customer').value||'').trim():'',
+    payments:payments,
+    boughtAt:document.getElementById('f_bought').value,
+    soldAt:sold?document.getElementById('f_sold').value:'',
+    note:(document.getElementById('f_note').value||'').trim()
+  };
+  var id=el.dataset.id;
+  if(id){
+    S.items=S.items.map(function(x){return x.id===id?Object.assign({},x,base):x});
+  } else {
+    base.id=uid(); base.createdAt=new Date().toISOString();
+    S.items=[base].concat(S.items);
+  }
+  save(); closeSheet(); render();
+}
+
+/* ── instellingen ── */
+function openSettings(){
+  var t=totals();
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">Instellingen</div></div>'
+   + '<div class="label">Wisselkoers</div>'
+   + '<div style="display:flex;align-items:center;gap:10px"><span class="mono dim">1 &euro; =</span>'
+   + '<input class="in mono" id="s_rate" inputmode="decimal" value="'+comma(S.rate,2)+'"><span class="mono dim">DH</span></div>'
+   + '<button class="outline quiet" data-act="rate1030">Terug naar 10,30</button>'
+   + '<div class="note">Bedragen blijven staan in de valuta waarin je ze invulde. Alleen de omrekening volgt deze koers.</div>'
+   + '<div class="divider"></div>'
+   + '<div class="label">Jouw boek</div>'
+   + '<div class="mono dim" style="font-size:14px">'+S.items.length+' toestellen &middot; '+t.verkocht+' verkocht &middot; winst '+eur(t.winst)+'</div>'
+   + (function(){
+       if(!S.lastBackup)return '<div class="hint" style="color:var(--saffron);margin-top:10px">Je hebt nog nooit een back-up gemaakt.</div>';
+       var dagen=Math.floor((new Date()-new Date(S.lastBackup))/86400000);
+       var oud=dagen>14;
+       return '<div class="hint" style="margin-top:10px'+(oud?';color:var(--saffron)':'')+'">Laatste back-up: '+dateNL(S.lastBackup)
+         + (dagen>0?(' — '+dagen+' dagen geleden'):' — vandaag')+(oud?'. Tijd voor een nieuwe.':'')+'</div>';
+     })()
+   + '<button class="outline" data-act="sharebackup">Back-up versturen of opslaan</button>'
+   + '<button class="outline quiet" data-act="copy" id="copyBtn">Kopiëren naar klembord</button>'
+   + '<button class="outline quiet" data-act="showbackup">Tekst op het scherm zetten</button>'
+   + '<div id="backupBox"></div>'
+   + '<div class="note">Je gegevens staan in deze app op dit toestel. Maak af en toe een back-up, dan kun je alles terugzetten of naar je andere telefoon overzetten.</div>'
+   + '<div class="label">Back-up terugzetten</div>'
+   + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px"></textarea>'
+   + '<button class="outline quiet" data-act="import">Terugzetten (overschrijft dit boek)</button>'
+   + '<div class="note" id="importMsg"></div>'
+   + '<div class="divider"></div>'
+   + '<div class="label">Slot op de app</div>'
+   + (S.pin
+      ? '<div class="hint" style="margin-top:0">De app vraagt om je code bij het openen. Met het oog bovenin kun je losse bedragen verbergen zonder de app te sluiten.</div>'
+        + '<button class="outline quiet" data-act="setpin">Code wijzigen</button>'
+        + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
+      : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
+        + '<button class="outline" data-act="setpin">Code instellen</button>')
+   + '<div class="ver">Telefoonboek versie 8 &middot; augustus 2026</div>'
+   + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+  document.getElementById('s_rate').addEventListener('input',function(){
+    var n=num(this.value); if(n>0){S.rate=n;save()}
+  });
+}
+
+/* ── doorstuurbericht, Arabisch of Nederlands ── */
+var TXT={
+  ar:{titel:'دفتر الهواتف', verkocht:'تم البيع', voorraad:'في المخزون',
+      inkoop:'الشراء', verkoop:'البيع', winst:'الربح', samen:'الربح المشترك', dh:'درهم'},
+  nl:{titel:'Telefoonboek', verkocht:'VERKOCHT', voorraad:'NOG OP VOORRAAD',
+      inkoop:'inkoop', verkoop:'verkoop', winst:'winst', samen:'WINST SAMEN', dh:'DH'}
+};
+function bedrag(eurBedrag,lang){
+  return (eurBedrag*S.rate).toLocaleString('nl-NL',{maximumFractionDigits:0})+' '+TXT[lang].dh;
+}
+function shareText(lang){
+  var T=TXT[lang], t=totals();
+  var d=new Date(), dd=('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();
+  var L=[T.titel+' — '+dd];
+  var verkocht=S.items.filter(function(x){return x.sold});
+  var voorraad=S.items.filter(function(x){return !x.sold});
+  function naam(it){return it.brand+' '+it.model+(it.storage?' '+it.storage:'')}
+  if(verkocht.length){
+    L.push('',T.verkocht);
+    verkocht.forEach(function(it){
+      var dr=doorEUR(it), u=toEUR(it.sell,it.sellCur);
+      L.push('- '+naam(it));
+      L.push('  '+T.inkoop+' '+bedrag(dr,lang)+' | '+T.verkoop+' '+bedrag(u,lang)+' | '+T.winst+' '+bedrag(u-dr,lang));
+    });
+  }
+  if(voorraad.length){
+    L.push('',T.voorraad);
+    voorraad.forEach(function(it){L.push('- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorEUR(it),lang))});
+  }
+  L.push('',T.samen+': '+bedrag(t.onze,lang));
+  return L.join('\n');
+}
+
+function openShare(){
+  var lang=ui.lang, txt=shareText(lang);
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">Doorgeven</div></div>'
+   + '<div class="segsm" style="margin-top:16px"><button class="'+(lang==='ar'?'on':'')+'" data-act="lang" data-l="ar">عربي</button>'
+   + '<button class="'+(lang==='nl'?'on':'')+'" data-act="lang" data-l="nl">Nederlands</button></div>'
+   + '<div class="note">Alleen dit gaat mee: de doorgegeven inkoop, de verkoop en de winst samen, alles in dirham. '
+   + 'Je echte inkoop, je eigen marge en je eigen winst staan er niet in.</div>'
+   + '<div class="pre"'+(lang==='ar'?' dir="rtl" style="text-align:right"':'')+'>'+esc(txt)+'</div>'
+   + '<button class="outline" data-act="sendshare">Versturen</button>'
+   + '<button class="outline quiet" data-act="wa">Openen in WhatsApp</button>'
+   + '<button class="outline quiet" data-act="copyshare">Kopiëren</button>'
+   + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+}
+
+/* ── controleren bij inkoop ── */
+var CODES={
+ 'iPhone':{
+   note:'iOS heeft geen testmenu met codes. Alleen deze werken; de echte controle doe je met de lijst eronder.',
+   list:[
+    ['*#06#','IMEI op het scherm. Vergelijk met het nummer in de simlade en op de doos. Wijkt het af, niet kopen.'],
+    ['*3001#12345#*','Intoetsen en bellen: Field Test. Toont de echte signaalsterkte in dBm. Rond −80 is sterk, onder −110 is slecht bereik.'],
+    ['*#21#','Staat er een doorschakeling aan? Zo ja, kan een vorige eigenaar gesprekken ontvangen.'],
+    ['*#62#','Doorschakeling als het toestel onbereikbaar is.'],
+    ['*#67#','Doorschakeling als er in gesprek is.'],
+    ['*#31#','Wordt het nummer verborgen bij uitgaand bellen.']
+   ]},
+ 'Samsung':{
+   note:'Samsung heeft het beste testmenu van allemaal. Gebruik *#0*# altijd, dat scheelt je de meeste ellende.',
+   list:[
+    ['*#06#','IMEI. Vergelijk met de simlade en de doos.'],
+    ['*#0*#','Het grote testmenu. Rode, groene en blauwe schermen voor dode pixels, touchtest, luidspreker, oorspeaker, trilling, sensoren en camera. Dit is de belangrijkste code.'],
+    ['*#0228#','Accu: spanning, temperatuur en status. Onder 3,7 volt bij vol geladen is verdacht.'],
+    ['*#1234#','Firmware en regiocode. Zo zie je uit welk land het toestel komt.'],
+    ['*#12580*369#','Hardware- en software-informatie op één scherm.'],
+    ['*#0011#','Servicemenu met netwerkgegevens.'],
+    ['*#*#4636#*#*','Android-testmenu: netwerk en gebruiksgegevens.']
+   ]},
+ 'Xiaomi':{
+   note:'Het testmenu heet CIT. Werkt op de meeste Redmi- en Poco-modellen.',
+   list:[
+    ['*#06#','IMEI. Vergelijk met de simlade en de doos.'],
+    ['*#*#64663#*#*','CIT-testmenu: scherm, touch, camera, speakers, sensoren, trilling.'],
+    ['*#*#6484#*#*','Zelfde testmenu op oudere modellen.'],
+    ['*#*#4636#*#*','Android-testmenu: netwerk en gebruiksgegevens.']
+   ]},
+ 'Google Pixel':{
+   note:'Pixel heeft geen testmenu met codes. Loop de lijst eronder met de hand af.',
+   list:[
+    ['*#06#','IMEI. Vergelijk met de simlade en de doos.'],
+    ['*#*#4636#*#*','Android-testmenu: netwerk en gebruiksgegevens.']
+   ]},
+ 'OnePlus':{
+   note:'',
+   list:[
+    ['*#06#','IMEI. Vergelijk met de simlade en de doos.'],
+    ['*#808#','Testmenu van OnePlus: scherm, touch, camera, speakers, sensoren.'],
+    ['*#*#4636#*#*','Android-testmenu: netwerk en gebruiksgegevens.']
+   ]},
+ 'Oppo':{
+   note:'Ook voor Realme; werkt niet op elk model.',
+   list:[
+    ['*#06#','IMEI. Vergelijk met de simlade en de doos.'],
+    ['*#800#','Engineermodus met de hardwaretests.'],
+    ['*#*#4636#*#*','Android-testmenu: netwerk en gebruiksgegevens.']
+   ]},
+ 'Huawei':{
+   note:'Ook voor de oudere Honor-modellen.',
+   list:[
+    ['*#06#','IMEI. Vergelijk met de simlade en de doos.'],
+    ['*#*#2846579#*#*','Projectmenu met de hardwaretests en netwerkinformatie.'],
+    ['*#*#4636#*#*','Android-testmenu: netwerk en gebruiksgegevens.']
+   ]},
+ 'Ander merk':{
+   note:'Op Android werkt bijna altijd het eerste; de rest verschilt per merk.',
+   list:[
+    ['*#06#','IMEI. Vergelijk met de simlade en de doos.'],
+    ['*#*#4636#*#*','Android-testmenu: netwerk en gebruiksgegevens.'],
+    ['*#0*#','Probeer deze; op sommige merken opent het een testmenu.']
+   ]}
+};
+
+var TIPS=[
+ 'Spreek af op een openbare plek met wifi en een stopcontact. Je hebt beide nodig om goed te testen.',
+ 'Test met je eigen simkaart en je eigen kabel, nooit met die van de verkoper.',
+ '&#8220;Hij is leeg, je kunt hem nu niet aanzetten&#8221; — dan koop je niet. Dat is de oudste truc die er is.',
+ 'Laat de verkoper het eerste bedrag noemen. Noem daarna één prijs en zeg dan even niets.',
+ 'Vraag waarom hij verkoopt. Een vaag antwoord is een reden om weg te lopen.',
+ 'Vraag altijd naar doos, kabel en bon. Die leveren bij verkoop meer op dan wat ze je kosten.',
+ 'Is het scherm ooit vervangen? Check bij een iPhone of Face ID nog werkt — dat sneuvelt daar vaak bij.',
+ 'Accu onder 85 procent: reken de vervanging meteen in je inkoopprijs, niet achteraf.',
+ 'Kijk wat hetzelfde model bij anderen te koop staat vóór je biedt. Vraagprijzen zijn geen verkoopprijzen.',
+ 'Bewaar de advertentie, de naam en het telefoonnummer van de verkoper. Een screenshot is genoeg.',
+ 'Betaal pas als de test klaar is en het toestel op het beginscherm staat.',
+ 'Nooit vooruitbetalen voor verzending. Altijd persoonlijk ophalen.',
+ 'Vertel je klant in Marokko wat er vervangen is. Dat voorkomt dat hij terugkomt.',
+ 'Laat nooit meer dan een kwart van je geld in één toestel zitten. Eén misser mag je niet stilzetten.'
+];
+
+var CHECKS=[
+ ['Papieren en sloten',[
+  ['a1','IMEI met *#06# opgevraagd en vergeleken met de simlade en de doos'],
+  ['a2','IMEI gecheckt op stopheling.nl — geen melding'],
+  ['a3','Verkoper heeft het toestel gewist terwijl jij ernaast stond'],
+  ['a4','Zelf doorgelopen tot het beginscherm: geen iCloud- of Googleslot'],
+  ['a5','Eigen simkaart getest: geen provider-slot'],
+  ['a6','Foto gemaakt van het toestel en van de IMEI']
+ ]],
+ ['Scherm en behuizing',[
+  ['b1','Wit beeld: geen vlekken, schaduwen of dode pixels'],
+  ['b2','Zwart beeld: geen lichtvlekken, groene of paarse lijnen'],
+  ['b3','Touch getest tot in alle vier de hoeken'],
+  ['b4','Geen kieren rond het scherm, geen kromming in het frame'],
+  ['b5','Geen sporen van water of van eerdere reparatie'],
+  ['b6','Originele onderdelen — bij iPhone staat een melding onder Info']
+ ]],
+ ['Werkt alles',[
+  ['c1','Accugezondheid bekeken en genoteerd'],
+  ['c2','Alle camera\u2019s: voor, achter, zoom, video en flits'],
+  ['c3','Luidspreker, oorspeaker en microfoon'],
+  ['c4','Face ID of vingerafdruk zelf aangemeld'],
+  ['c5','Knoppen, trilling, automatisch draaien, nabijheidssensor'],
+  ['c6','Laden met kabel en draadloos'],
+  ['c7','Wifi, bluetooth, bellen en mobiel internet']
+ ]],
+ ['Afronden',[
+  ['d1','Prijs afgesproken'],
+  ['d2','Doorgegeven prijs bepaald'],
+  ['d3','Pas betaald toen alles hierboven klopte']
+ ]]
+];
+
+function openCheck(){
+  var brand=S.checkBrand||'iPhone';
+  if(!CODES[brand])brand='Ander merk';
+  var c=CODES[brand];
+  var totaal=0,gedaan=0;
+  CHECKS.forEach(function(g){g[1].forEach(function(r){totaal++;if(S.checks[r[0]])gedaan++})});
+
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">Controleren bij inkoop</div></div>';
+
+  h+='<div class="label">Merk</div><div class="selwrap"><select class="in" id="c_brand">'
+   + Object.keys(CODES).map(function(b){return '<option value="'+esc(b)+'"'+(b===brand?' selected':'')+'>'+esc(b)+'</option>'}).join('')
+   + '</select></div>';
+
+  if(c.note)h+='<div class="hint" style="margin-top:8px">'+esc(c.note)+'</div>';
+
+  h+='<button class="outline quiet" data-act="tips">'+(ui.tips?'Tips verbergen':'Tips voor de afspraak')+'</button>';
+  if(ui.tips){
+    h+='<div class="tips"><ul>'+TIPS.map(function(t){return '<li>'+t+'</li>'}).join('')+'</ul></div>';
+  }
+
+  h+='<div class="grp">Codes voor '+esc(brand)+'</div>';
+  h+='<div class="hint">Tik op een code om hem te kopiëren, plak hem daarna in de bel-app.</div>';
+  c.list.forEach(function(r){
+    h+='<button class="code" data-act="copycode" data-c="'+esc(r[0])+'"><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></button>';
+  });
+  h+='<div class="warn" style="margin-top:14px">Codes die beginnen met <span class="mono">*2767*</span> of '
+   + '<span class="mono">*#*#7780</span> wissen het hele toestel. Typ die nooit in bij een telefoon die nog niet van jou is.</div>';
+
+  CHECKS.forEach(function(g){
+    h+='<div class="grp">'+esc(g[0])+'</div>';
+    g[1].forEach(function(r){
+      var on=!!S.checks[r[0]];
+      h+='<button class="chk'+(on?' on':'')+'" data-act="tick" data-k="'+r[0]+'">'
+       + '<span class="b">&#10003;</span><span class="t">'+esc(r[1])+'</span></button>';
+    });
+  });
+
+  h+='<div class="count">'+gedaan+' van '+totaal+' afgevinkt</div>'
+   + '<button class="outline quiet" data-act="resetchecks">Lijst leegmaken voor de volgende telefoon</button>';
+
+  h+='</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+
+  document.getElementById('c_brand').addEventListener('change',function(){
+    S.checkBrand=this.value; save(); openCheck();
+  });
+}
+
+/* ── bonnetje voor de klant ── */
+function waNumber(raw){
+  var d=String(raw||'').replace(/[^0-9]/g,'');
+  if(!d)return '';
+  if(d.slice(0,2)==='00')d=d.slice(2);
+  if(d.charAt(0)==='0')d='212'+d.slice(1);
+  return d;
+}
+var BON={
+  ar:{titel:'وصل', imei:'IMEI', prijs:'الثمن', betaald:'المدفوع', rest:'الباقي', klaar:'تم الدفع بالكامل. شكرا', dank:'شكرا'},
+  nl:{titel:'Bonnetje', imei:'IMEI', prijs:'Prijs', betaald:'Betaald', rest:'Nog te betalen', klaar:'Volledig betaald. Bedankt', dank:'Bedankt'}
+};
+function receiptText(it,lang){
+  var B=BON[lang], d=new Date();
+  var dd=('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();
+  var prijs=toEUR(it.sell,it.sellCur), bet=paidEUR(it), rest=Math.max(0,prijs-bet);
+  var L=[B.titel+' — '+dd, it.brand+' '+it.model+(it.storage?' '+it.storage:'')];
+  if(it.imei)L.push(B.imei+': '+it.imei);
+  L.push(B.prijs+': '+bedrag(prijs,lang));
+  L.push(B.betaald+': '+bedrag(bet,lang));
+  if(rest>0.01)L.push(B.rest+': '+bedrag(rest,lang)); else L.push(B.klaar);
+  return L.join('\n');
+}
+function openReceipt(id){
+  var it=S.items.filter(function(x){return x.id===id})[0];
+  if(!it)return;
+  ui.receiptFor=id;
+  var lang=ui.lang, txt=receiptText(it,lang), nr=waNumber(it.phone);
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">Bonnetje</div></div>'
+   + '<div class="segsm" style="margin-top:16px"><button class="'+(lang==='ar'?'on':'')+'" data-act="rlang" data-l="ar" data-id="'+id+'">عربي</button>'
+   + '<button class="'+(lang==='nl'?'on':'')+'" data-act="rlang" data-l="nl" data-id="'+id+'">Nederlands</button></div>'
+   + '<div class="note">Voor '+(esc(it.customer)||'je klant')+'. Hierin staat alleen de verkoopprijs en wat er betaald is.</div>'
+   + '<div class="pre"'+(lang==='ar'?' dir="rtl" style="text-align:right"':'')+'>'+esc(txt)+'</div>';
+  if(nr) h+='<button class="outline" data-act="wabon" data-id="'+id+'">Sturen naar '+esc(nr)+'</button>';
+  else h+='<div class="hint" style="margin-top:12px">Geen nummer bij deze klant. Zet het erbij via Bewerken, dan kan het in één tik.</div>';
+  h+='<button class="outline quiet" data-act="sendbon" data-id="'+id+'">Versturen via het deelmenu</button>'
+   + '<button class="outline quiet" data-act="copybon" data-id="'+id+'">Kopiëren</button>'
+   + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+}
+
+function backupText(){return JSON.stringify({v:1,rate:S.rate,items:S.items})}
+
+/* Op een iPhone-app werkt opslaan als bestand niet. Delen wel. */
+function shareBackup(btn){
+  S.lastBackup=today(); save();
+  var txt=backupText(), naam='telefoonboek-'+today()+'.json';
+  try{
+    var f=new File([txt],naam,{type:'application/json'});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){
+      navigator.share({files:[f],title:naam}).catch(function(){});
+      return;
+    }
+  }catch(e){}
+  if(navigator.share){navigator.share({text:txt}).catch(function(){});return}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(function(){btn.textContent='Gekopieerd'},function(){showBackup()});
+    return;
+  }
+  showBackup();
+}
+
+/* laatste vangnet: de tekst op het scherm, zelf selecteren en kopiëren */
+function showBackup(){
+  var box=document.getElementById('backupBox');
+  if(!box)return;
+  box.innerHTML='<div class="hint">Houd de tekst ingedrukt, kies Alles selecteren en dan Kopiëren. '
+   + 'Plak het daarna in een bericht aan jezelf of in je notities.</div>'
+   + '<textarea class="in mono" readonly rows="6" id="backupText" style="font-size:11px;margin-top:8px">'+esc(backupText())+'</textarea>';
+  var t=document.getElementById('backupText');
+  if(t){t.focus();try{t.setSelectionRange(0,t.value.length)}catch(e){}}
+  S.lastBackup=today(); save();
+}
+
+function download(){
+  S.lastBackup=today(); save();
+  var blob=new Blob([JSON.stringify({v:1,rate:S.rate,items:S.items},null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='telefoonboek-'+today()+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function closeSheet(){document.getElementById('sheet').innerHTML=''}
+
+/* ── klikken ── */
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]'); if(!b)return;
+  var act=b.dataset.act, id=b.dataset.id;
+  var it=id?S.items.filter(function(x){return x.id===id})[0]:null;
+
+  if(act==='tab'){ui.tab=b.dataset.k;ui.payFor=null;render();return}
+  if(act==='new'){openForm(null);return}
+  if(act==='edit'){openForm(it);return}
+  if(act==='close'){closeSheet();render();return}
+  if(act==='savephone'){savePhone();return}
+  if(act==='settings'){openSettings();return}
+  if(act==='rate1030'){S.rate=10.3;save();openSettings();render();return}
+  if(act==='download'){download();return}
+  if(act==='sharebackup'){shareBackup(b);return}
+  if(act==='showbackup'){showBackup();return}
+  if(act==='share'){openShare();return}
+  if(act==='check'){openCheck();return}
+  if(act==='hide'){S.hide=!S.hide;save();render();return}
+  if(act==='lock'){locked=true;askPin();return}
+  if(act==='pinkey'){
+    if(pinBuf.length<4)pinBuf+=b.dataset.n;
+    lockScreen(lockKop(),lockSub());
+    if(pinBuf.length===4)setTimeout(pinDone,140);
+    return;
+  }
+  if(act==='pinclear'){pinBuf='';lockScreen(lockKop(),lockSub());return}
+  if(act==='pincancel'){pinMode=null;pinBuf='';document.getElementById('lock').innerHTML='';openSettings();return}
+  if(act==='pinforgot'){
+    lockScreen('Code vergeten','Zonder code kom je er niet in. Zet de app-gegevens opnieuw op met je back-upbestand: '
+      + 'verwijder de app van je beginscherm, open de link opnieuw in de browser en zet je back-up terug. '
+      + 'Heb je geen back-up, dan is je boek weg. Probeer eerst nog eens rustig je code.');
+    return;
+  }
+  if(act==='setpin'){pinMode='new';pinBuf='';lockScreen('Nieuwe code','Kies vier cijfers die je niet vergeet');return}
+  if(act==='offpin'){pinMode='off';pinBuf='';lockScreen('Code uitzetten','Voer je huidige code in');return}
+  if(act==='receipt'){openReceipt(id);return}
+  if(act==='rlang'){ui.lang=b.dataset.l;save();openReceipt(b.dataset.id);return}
+  if(act==='wabon'){
+    var itb=S.items.filter(function(x){return x.id===b.dataset.id})[0];
+    if(itb)window.open('https://wa.me/'+waNumber(itb.phone)+'?text='+encodeURIComponent(receiptText(itb,ui.lang)),'_blank');
+    return;
+  }
+  if(act==='sendbon'){
+    var itc=S.items.filter(function(x){return x.id===b.dataset.id})[0];
+    if(itc){
+      var tx=receiptText(itc,ui.lang);
+      if(navigator.share)navigator.share({text:tx}).catch(function(){});
+      else window.open('https://wa.me/?text='+encodeURIComponent(tx),'_blank');
+    }
+    return;
+  }
+  if(act==='copybon'){
+    var itd=S.items.filter(function(x){return x.id===b.dataset.id})[0];
+    if(itd&&navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(receiptText(itd,ui.lang)).then(function(){b.textContent='Gekopieerd'},function(){});
+    }
+    return;
+  }
+  if(act==='curtoggle'){
+    var el2=document.getElementById('sheet');
+    el2.dataset[b.dataset.f+'Cur']=b.dataset.v;
+    var wrap=b.parentNode;
+    [].forEach.call(wrap.querySelectorAll('button'),function(x){x.className=x.dataset.v===b.dataset.v?'on':''});
+    var inp=document.getElementById(b.dataset.i);
+    if(inp)inp.dispatchEvent(new Event('input',{bubbles:true}));
+    return;
+  }
+  if(act==='tips'){ui.tips=!ui.tips;openCheck();return}
+  if(act==='lang'){
+    ui.lang=b.dataset.l; save();
+    if(document.querySelector('.pre'))openShare(); else render();
+    return;
+  }
+  if(act==='tick'){
+    var k=b.dataset.k;
+    if(S.checks[k])delete S.checks[k]; else S.checks[k]=1;
+    save();
+    b.className='chk'+(S.checks[k]?' on':'');
+    var cnt=document.querySelector('.count');
+    if(cnt){
+      var tot=0,ged=0;
+      CHECKS.forEach(function(g){g[1].forEach(function(r){tot++;if(S.checks[r[0]])ged++})});
+      cnt.textContent=ged+' van '+tot+' afgevinkt';
+    }
+    return;
+  }
+  if(act==='resetchecks'){S.checks={};save();openCheck();return}
+  if(act==='copycode'){
+    var code=b.dataset.c, sp=b.querySelector('span'), orig=sp.textContent;
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(function(){
+        sp.textContent='Gekopieerd. Plak in je bel-app en bel.';
+        setTimeout(function(){sp.textContent=orig},2200);
+      },function(){sp.textContent='Kopiëren lukt niet, typ hem over.';setTimeout(function(){sp.textContent=orig},2200)});
+    } else {sp.textContent='Kopiëren lukt niet, typ hem over.';setTimeout(function(){sp.textContent=orig},2200)}
+    return;
+  }
+  if(act==='sendshare'){
+    var st=shareText(ui.lang);
+    if(navigator.share){navigator.share({text:st}).catch(function(){})}
+    else{window.open('https://wa.me/?text='+encodeURIComponent(st),'_blank')}
+    return;
+  }
+  if(act==='wa'){window.open('https://wa.me/?text='+encodeURIComponent(shareText(ui.lang)),'_blank');return}
+  if(act==='copyshare'){
+    var s2=shareText(ui.lang);
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(s2).then(function(){b.textContent='Gekopieerd'},function(){b.textContent='Kopiëren lukt niet'});
+    } else b.textContent='Kopiëren lukt niet';
+    return;
+  }
+  if(act==='tipoff'){ui.tipOff=true;try{localStorage.setItem(KEY+'_tip','1')}catch(err){}render();return}
+
+  if(act==='toggle'){
+    if(!it.sold&&!num(it.sell)){openForm(it);
+      var el=document.getElementById('sheet');
+      el.dataset.sold='1';
+      var seg=document.getElementById('f_seg').querySelectorAll('button');
+      seg[0].className=''; seg[1].className='on-sold';
+      document.getElementById('soldBox').hidden=false;
+      return;
+    }
+    it.sold=!it.sold; it.soldAt=it.sold?today():'';
+    save();render();return;
+  }
+  if(act==='pay'){ui.payFor=id;render();return}
+  if(act==='cancelpay'){ui.payFor=null;render();return}
+  if(act==='addpay'){
+    var v=num(document.getElementById('payinput').value);
+    if(v>0){it.payments=(it.payments||[]).concat([{id:uid(),date:today(),amount:v,cur:it.sellCur||'MAD'}]);save()}
+    ui.payFor=null;render();return;
+  }
+  if(act==='delpay'){
+    var pid=b.dataset.pid;
+    it.payments=(it.payments||[]).filter(function(p){return p.id!==pid});
+    save();render();return;
+  }
+  if(act==='askdel'){ui.confirmDel=id;render();return}
+  if(act==='undel'){ui.confirmDel=null;render();return}
+  if(act==='del'){S.items=S.items.filter(function(x){return x.id!==id});ui.confirmDel=null;save();render();return}
+
+  if(act==='copy'){
+    S.lastBackup=today(); save();
+    var txt=JSON.stringify({v:1,rate:S.rate,items:S.items});
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){b.textContent='Gekopieerd'},function(){b.textContent='Kopiëren lukt niet — gebruik het bestand'});
+    } else b.textContent='Kopiëren lukt niet — gebruik het bestand';
+    return;
+  }
+  if(act==='import'){
+    var msg=document.getElementById('importMsg');
+    try{
+      var d=JSON.parse(document.getElementById('s_import').value);
+      if(!d||!Array.isArray(d.items))throw new Error('bad');
+      S.items=d.items; if(d.rate)S.rate=d.rate;
+      save();openSettings();render();
+      document.getElementById('importMsg').textContent=d.items.length+' toestellen teruggezet.';
+    }catch(err){msg.textContent='Deze tekst is geen geldige back-up. Kopieer hem nog een keer helemaal.'}
+    return;
+  }
+});
+
+load();
+if(S.pin){locked=true;render();askPin();} else {render();}
+
+/* na een paar minuten weg gaat hij weer op slot */
+var wegSinds=0;
+document.addEventListener('visibilitychange',function(){
+  if(!S.pin)return;
+  if(document.hidden){wegSinds=Date.now()}
+  else if(wegSinds && Date.now()-wegSinds>180000 && !locked){
+    locked=true; closeSheet(); render(); askPin();
+  }
+});
+
+/* offline houden, alleen als er een service worker mag */
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+  var verversd=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    if(verversd)return; verversd=true; location.reload();
+  });
+}
+</script>
+</body>
+</html>
