@@ -19,6 +19,8 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Tik op Geinvesteerd of Mijn winst voor de cijfers per telefoon
 - Hoe lang je geld al in een toestel zit, en een totaal per tabblad
 - Klanten met wat er nog open staat, en een herinnering via WhatsApp
+- Foto's per toestel, verkleind opgeslagen op je eigen telefoon
+- Wat je eerder voor hetzelfde model kreeg, bij het invoeren en op de kaart
 - Zendingen: een pakket naar Marokko met verzendkosten die zich gelijk
   verdelen over de toestellen erin, en in een tik allemaal op verstuurd
 - Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
@@ -45,9 +47,20 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 Verhoog het nummer op drie plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `Marokko &middot; v15` in de kop
-2. `index.html` — `Telefoonboek versie 15` onderaan de instellingen
-3. `sw.js` — `telefoonboek-v15`
+1. `index.html` — `Marokko &middot; v16` in de kop
+2. `index.html` — `Telefoonboek versie 16` onderaan de instellingen
+3. `sw.js` — `telefoonboek-v16`
+
+## Foto's
+
+Foto's staan niet in `localStorage` maar in IndexedDB, een tweede lade op het
+toestel die voor bestanden bedoeld is. Ze worden bij het toevoegen verkleind
+naar ongeveer 1400 pixels en opnieuw opgeslagen als JPEG, zo'n 200 KB per stuk.
+Maximaal vier per toestel.
+
+**Ze zitten niet in het back-upbestand.** Dat is tekst; een foto niet. Een
+back-up terugzetten geeft je je boek terug, niet je foto's. Gebruik de knop
+Sturen bij een foto om er een kopie van te bewaren.
 
 ## Nooit in deze repo
 
