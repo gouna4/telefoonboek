@@ -18,6 +18,11 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   om ook naar je collega uit te komen
 - Tik op Geinvesteerd of Mijn winst voor de cijfers per telefoon
 - Hoe lang je geld al in een toestel zit, en een totaal per tabblad
+- Klanten met wat er nog open staat, en een herinnering via WhatsApp
+- Een strook bovenaan als je een week geen back-up maakte
+- Waarschuwing als je een IMEI invoert die al in je boek staat
+- Verkochte toestellen houden de koers van hun verkoopdag, zodat oude
+  winst niet verschuift als je de koers aanpast
 - Betalingen per klant, met wat er nog open staat
 - Accupercentage en IMEI
 - Controlelijst met testcodes per merk, voor bij de inkoop
@@ -36,9 +41,9 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 Verhoog het nummer op drie plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `Marokko &middot; v12` in de kop
-2. `index.html` — `Telefoonboek versie 12` onderaan de instellingen
-3. `sw.js` — `telefoonboek-v12`
+1. `index.html` — `Marokko &middot; v13` in de kop
+2. `index.html` — `Telefoonboek versie 13` onderaan de instellingen
+3. `sw.js` — `telefoonboek-v13`
 
 ## Nooit in deze repo
 
