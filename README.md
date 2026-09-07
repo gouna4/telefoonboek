@@ -47,9 +47,9 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 Verhoog het nummer op drie plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `Marokko &middot; v16` in de kop
-2. `index.html` — `Telefoonboek versie 16` onderaan de instellingen
-3. `sw.js` — `telefoonboek-v16`
+1. `index.html` — `Marokko &middot; v17` in de kop
+2. `index.html` — `Telefoonboek versie 17` onderaan de instellingen
+3. `sw.js` — `telefoonboek-v17`
 
 ## Foto's
 
@@ -59,8 +59,16 @@ naar ongeveer 1400 pixels en opnieuw opgeslagen als JPEG, zo'n 200 KB per stuk.
 Maximaal vier per toestel.
 
 **Ze zitten niet in het back-upbestand.** Dat is tekst; een foto niet. Een
-back-up terugzetten geeft je je boek terug, niet je foto's. Gebruik de knop
-Sturen bij een foto om er een kopie van te bewaren.
+back-up terugzetten geeft je je boek terug, niet je foto's.
+
+Exporteren gaat via Instellingen -> Foto's exporteren naar een map:
+
+- Op een computer (Chrome, Edge) schrijft de app rechtstreeks in een map
+  die je aanwijst, met een naam per toestel zoals
+  `iPhone-12-128GB-Youssef-2026-08-20-1.jpg`
+- Op een telefoon mag een website niet in een map schrijven. Daar gaan ze
+  per groepje van acht naar het deelmenu; kies Opslaan in Bestanden en wijs
+  daar je map aan
 
 ## Nooit in deze repo
 
