@@ -45,11 +45,12 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 ## Een nieuwe versie uitbrengen
 
-Verhoog het nummer op drie plekken, anders zie je je eigen wijziging niet:
+Verhoog het nummer op twee plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `Marokko &middot; v17` in de kop
-2. `index.html` — `Telefoonboek versie 17` onderaan de instellingen
-3. `sw.js` — `telefoonboek-v17`
+1. `index.html` — `var VERSIE='19'` bovenaan het script
+2. `sw.js` — `telefoonboek-v19`
+
+De kop en de regel onderaan de instellingen halen het nummer daar zelf op.
 
 ## Foto's
 
