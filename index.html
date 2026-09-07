@@ -209,6 +209,8 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .fototh img{width:100%;height:100%;object-fit:cover;display:block}
 .fotoadd{width:62px;height:62px;border-radius:12px;border:1px dashed var(--line);
   color:var(--dim);font-size:11px;font-weight:600;line-height:1.3}
+.fotoact{align-self:center;border:1px solid var(--line);border-radius:999px;padding:8px 13px;
+  color:var(--dim);font-size:12px;font-weight:600;white-space:nowrap}
 .fotoview{position:fixed;inset:0;z-index:60;background:#0B0908;display:flex;flex-direction:column;
   padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
 .fotoview img{flex:1;min-height:0;width:100%;object-fit:contain}
@@ -314,6 +316,7 @@ function load(){
       if(d.checkBrand)S.checkBrand=d.checkBrand;
       if(d.lang)ui.lang=d.lang;
       if(d.lastBackup)S.lastBackup=d.lastBackup;
+      if(d.lastFoto)S.lastFoto=d.lastFoto;
       if(d.pin)S.pin=d.pin;
       if(d.hide)S.hide=d.hide;
       if(Array.isArray(d.snaps))S.snaps=d.snaps;
@@ -346,8 +349,8 @@ function save(){
   for(var poging=0;poging<4;poging++){
     try{
       localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
-        checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,pin:S.pin,hide:S.hide,snaps:S.snaps,
-        zendingen:S.zendingen}));
+        checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,lastFoto:S.lastFoto,
+        pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen}));
       ui.msg='';return true;
     }catch(e){
       /* Geen ruimte? Dan gaan de oudste herstelpunten eraf; je eigen boek gaat voor. */
@@ -535,6 +538,9 @@ function vulFotos(itemId){
     });
     if(lijst.length<FOTO_MAX)
       h+='<button class="fotoadd" data-act="fotoadd" data-id="'+itemId+'">+ foto</button>';
+    if(lijst.length)
+      h+='<button class="fotoact" data-act="fotoitem" data-id="'+itemId+'">'
+       + (lijst.length===1?'sturen':('alle '+lijst.length+' sturen'))+'</button>';
     b.innerHTML=h;
   }
   if(fotoUrls[itemId]){teken(fotoUrls[itemId]);return}
@@ -578,12 +584,197 @@ function openFotoView(itemId,fid){
   document.getElementById('foto').innerHTML=h;
 }
 
+/* een naam waar je in een map iets aan hebt:
+   iPhone-12-128GB-Youssef-2026-08-20-1.jpg */
+function fotoBestandsnaam(itemId,nr){
+  var it=null;
+  S.items.forEach(function(x){if(x.id===itemId)it=x});
+  var stuk=[];
+  if(it){
+    if(it.brand)stuk.push(it.brand);
+    if(it.model)stuk.push(it.model);
+    if(it.storage)stuk.push(String(it.storage).replace(/\s+/g,''));
+    if(it.customer)stuk.push(it.customer);
+    var dt=it.soldAt||it.sentAt||it.boughtAt||'';
+    if(dt)stuk.push(dt);
+  }
+  var basis=stuk.join('-')
+    .replace(/[^A-Za-z0-9\u00C0-\u024F-]+/g,'-')
+    .replace(/-+/g,'-').replace(/^-+|-+$/g,'');
+  if(!basis)basis='foto';
+  return basis+'-'+(num(nr)||1)+'.jpg';
+}
+
+/* alle foto's uit de lade, met hun naam erbij */
+function alleFotos(cb){
+  fotoDB(function(db){
+    if(!db){cb([]);return}
+    try{
+      var cur=db.transaction('fotos','readonly').objectStore('fotos').openCursor();
+      var uit=[];
+      cur.onsuccess=function(e){
+        var c=e.target.result;
+        if(c){uit.push(c.value);c.continue();return}
+        uit.sort(function(a,b){
+          if(a.itemId!==b.itemId)return String(a.itemId).localeCompare(String(b.itemId));
+          return (a.at||0)-(b.at||0);
+        });
+        var teller={};
+        uit.forEach(function(r){
+          teller[r.itemId]=(teller[r.itemId]||0)+1;
+          r.naam=fotoBestandsnaam(r.itemId,teller[r.itemId]);
+        });
+        cb(uit);
+      };
+      cur.onerror=function(){cb([])};
+    }catch(e){cb([])}
+  });
+}
+
+function fotoAlsFile(blob,naam){
+  return new File([blob],naam,{type:(blob&&blob.type)||'image/jpeg'});
+}
+
+/* doorgeven aan het deelmenu van de telefoon; daar kies je zelf de map */
+function deelFotos(files,klaar){
+  try{
+    if(files.length&&navigator.canShare&&navigator.canShare({files:files})){
+      navigator.share({files:files}).then(function(){klaar('ok')},function(){klaar('afgebroken')});
+      return;
+    }
+  }catch(e){}
+  klaar('kan-niet');
+}
+
+function kanInMapSchrijven(){
+  return !!(window.showDirectoryPicker);
+}
+
 function bytesTekst(n){
   n=num(n);
   if(n<1024)return Math.round(n)+' B';
   if(n<1048576)return Math.round(n/1024)+' KB';
   if(n<1073741824)return comma(n/1048576,1)+' MB';
   return comma(n/1073741824,1)+' GB';
+}
+
+/* ── foto's exporteren ── */
+var expRijen=[], expIndex=0, expMelding='', expBezig=false;
+var EXP_GROEP=8;
+
+function openFotoExport(){
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">Foto&#39;s exporteren</div></div>';
+
+  if(!expRijen.length&&!expBezig){
+    h+='<div class="note">Even kijken hoeveel foto&#39;s er zijn&hellip;</div>';
+  } else if(!expRijen.length){
+    h+='<div class="note">Je hebt nog geen foto&#39;s toegevoegd.</div>';
+  } else {
+    var bytes=0;
+    expRijen.forEach(function(r){bytes+=num(r.size)||0});
+    h+='<div class="mono dim" style="font-size:14px;margin-top:4px">'+expRijen.length+' '
+     + (expRijen.length===1?'foto':'foto&#39;s')+' &middot; '+bytesTekst(bytes)+'</div>';
+
+    if(kanInMapSchrijven()){
+      h+='<div class="label">Rechtstreeks in een map</div>'
+       + '<button class="outline" data-act="fotomap">Kies een map en schrijf alles erin</button>'
+       + '<div class="hint">Deze browser mag zelf in een map schrijven. Je wijst de map aan en de app '
+       + 'zet er alle foto&#39;s in, met een nette naam per toestel.</div>';
+    } else {
+      h+='<div class="label">Per groepje doorgeven</div>';
+      var over=expRijen.length-expIndex;
+      var groepjes=Math.ceil(expRijen.length/EXP_GROEP);
+      var nu=Math.min(EXP_GROEP,over);
+      if(over>0){
+        h+='<button class="outline" data-act="fotogroep">Groepje '
+         + (Math.floor(expIndex/EXP_GROEP)+1)+' van '+groepjes+' sturen ('+nu+' '
+         + (nu===1?'foto':'foto&#39;s')+')</button>';
+      } else {
+        h+='<div class="note" style="color:var(--mint)">Alle groepjes zijn doorgegeven.</div>';
+      }
+      h+='<div class="hint">Je telefoon laat een website niet zelf in een map schrijven. Kies in het '
+       + 'deelmenu <b>Opslaan in Bestanden</b> en wijs daar je map aan &mdash; of stuur ze naar Drive, '
+       + 'iCloud of naar jezelf via WhatsApp.</div>';
+    }
+
+    if(expMelding)h+='<div class="warn" style="border-color:var(--line)">'+esc(expMelding)+'</div>';
+
+    h+='<div class="divider"></div>'
+     + '<div class="hint">'+(S.lastFoto
+        ? ('Laatste keer geexporteerd: '+dateNL(S.lastFoto)+'.')
+        : 'Je hebt je foto&#39;s nog nooit geexporteerd.')
+     + ' Foto&#39;s passen niet in je back-upbestand, dus dit is de enige manier om ze buiten je '
+     + 'telefoon te bewaren.</div>';
+  }
+
+  h+='</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+
+  if(!expRijen.length&&!expBezig){
+    expBezig=true;
+    alleFotos(function(rijen){
+      expRijen=rijen; expIndex=0; expBezig=false;
+      openFotoExport();
+    });
+  }
+}
+
+/* op een computer: alles in een map die je aanwijst */
+function exportNaarMap(){
+  if(!kanInMapSchrijven())return;
+  var kiezer;
+  try{kiezer=window.showDirectoryPicker({mode:'readwrite'})}
+  catch(e){expMelding='Deze browser wil geen map geven.';openFotoExport();return}
+  kiezer.then(function(dir){
+    var i=0, gelukt=0, mis=0;
+    function volgende(){
+      if(i>=expRijen.length){
+        S.lastFoto=today(); save();
+        expMelding=gelukt+' '+(gelukt===1?'foto':'foto\'s')+' in de map gezet'
+          + (mis?(', '+mis+' niet gelukt'):'')+'.';
+        openFotoExport();
+        return;
+      }
+      var r=expRijen[i++];
+      expMelding='Bezig: '+i+' van '+expRijen.length+'\u2026';
+      var m=document.querySelector('.sheet .warn');
+      if(m)m.textContent=expMelding;
+      dir.getFileHandle(r.naam,{create:true}).then(function(fh){
+        return fh.createWritable();
+      }).then(function(w){
+        return w.write(r.blob).then(function(){return w.close()});
+      }).then(function(){gelukt++;volgende()},function(){mis++;volgende()});
+    }
+    if(!expMelding){expMelding='Bezig\u2026';openFotoExport()}
+    volgende();
+  },function(){ /* je hebt het venster gesloten */ });
+}
+
+/* op de telefoon: een groepje aan het deelmenu geven */
+function deelGroepje(){
+  var groep=expRijen.slice(expIndex,expIndex+EXP_GROEP);
+  if(!groep.length)return;
+  var files=[];
+  groep.forEach(function(r){
+    try{files.push(fotoAlsFile(r.blob,r.naam))}catch(e){}
+  });
+  deelFotos(files,function(uitslag){
+    if(uitslag==='ok'){
+      expIndex+=groep.length;
+      S.lastFoto=today(); save();
+      expMelding=expIndex>=expRijen.length
+        ? 'Klaar. Alle foto\'s zijn doorgegeven.'
+        : 'Groepje doorgegeven. Er '+((expRijen.length-expIndex)===1?'is':'zijn')+' nog '
+          + (expRijen.length-expIndex)+' over.';
+    } else if(uitslag==='kan-niet'){
+      expMelding='Deze telefoon kan foto\'s niet doorgeven via het deelmenu. '
+        + 'Open de app op een computer in Chrome; daar kan het rechtstreeks naar een map.';
+    } else {
+      expMelding='Afgebroken, er is niets doorgegeven.';
+    }
+    openFotoExport();
+  });
 }
 
 /* ── wat je eerder voor dit model kreeg ── */
@@ -758,7 +949,7 @@ function render(){
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v16</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v17</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -1705,6 +1896,7 @@ function openSettings(){
    + '<div class="divider"></div>'
    + '<div class="label">Foto\'s</div>'
    + '<div class="mono dim" id="s_fotos" style="font-size:14px">even kijken&hellip;</div>'
+   + '<button class="outline" data-act="fotoexport">Foto\'s exporteren naar een map</button>'
    + '<button class="outline quiet" data-act="fotokeep">Vraag je telefoon deze gegevens te bewaren</button>'
    + '<div class="hint">Foto\'s staan in een aparte lade op dit toestel. Ze passen <b>niet</b> in je '
    + 'back-upbestand, want dat is tekst. Wil je een foto zeker houden, stuur hem dan ook naar jezelf '
@@ -1717,7 +1909,7 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 16 &middot; september 2026</div>'
+   + '<div class="ver">Telefoonboek versie 17 &middot; september 2026</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
@@ -2300,6 +2492,26 @@ document.addEventListener('click',function(e){
     return;
   }
   if(act==='fotoview'){openFotoView(id,b.dataset.f);return}
+  if(act==='fotoitem'){
+    /* alle foto's van dit toestel in een keer doorgeven */
+    var l2=fotoUrls[id]||[];
+    if(!l2.length)return;
+    var fs=[];
+    l2.forEach(function(x,ix){
+      try{fs.push(fotoAlsFile(x.blob,fotoBestandsnaam(id,ix+1)))}catch(e){}
+    });
+    deelFotos(fs,function(uitslag){
+      if(uitslag==='ok'){S.lastFoto=today();save()}
+      else if(uitslag==='kan-niet'){
+        ui.msg='Deze telefoon kan foto\'s niet doorgeven via het deelmenu. Op een computer kan het wel, rechtstreeks naar een map.';
+        render();
+      }
+    });
+    return;
+  }
+  if(act==='fotoexport'){expRijen=[];expIndex=0;expMelding='';expBezig=false;openFotoExport();return}
+  if(act==='fotomap'){exportNaarMap();return}
+  if(act==='fotogroep'){deelGroepje();return}
   if(act==='fotoclose'){document.getElementById('foto').innerHTML='';return}
   if(act==='fotostep'){
     var lst=fotoUrls[id]||[], hier=-1;
@@ -2322,8 +2534,10 @@ document.addEventListener('click',function(e){
   if(act==='fotoshare'){
     var ff=fotoUitCache(id,b.dataset.f);
     if(!ff)return;
+    var lijstNu=fotoUrls[id]||[], nr=1;
+    lijstNu.forEach(function(x,ix){if(x.id===ff.id)nr=ix+1});
     try{
-      var fl=new File([ff.blob],'telefoon-'+id+'.jpg',{type:(ff.blob&&ff.blob.type)||'image/jpeg'});
+      var fl=fotoAlsFile(ff.blob,fotoBestandsnaam(id,nr));
       if(navigator.canShare&&navigator.canShare({files:[fl]})){
         navigator.share({files:[fl]}).catch(function(){});
         return;
