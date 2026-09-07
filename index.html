@@ -57,7 +57,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* ── cijfers bovenaan ── */
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px 14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px 14px;
+  display:block;width:100%;text-align:left}
 .stat .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim)}
 .stat .v{font-family:var(--mono);font-size:21px;font-weight:600;margin-top:8px;letter-spacing:-.03em;word-break:break-all}
 .stat .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:3px}
@@ -74,8 +75,10 @@ input,select,textarea{font-family:inherit;font-size:16px}
   font-size:14px;font-weight:700;letter-spacing:.01em}
 
 /* ── tabbladen ── */
-.tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin-top:22px}
-.tab{flex:1;min-width:0;border-radius:10px;padding:9px 1px;font-size:12px;font-weight:600;color:var(--dim);letter-spacing:-.01em;white-space:nowrap}
+.tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin-top:22px;
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;border-radius:10px;padding:9px 11px;font-size:12.5px;font-weight:600;color:var(--dim);letter-spacing:-.01em;white-space:nowrap}
 .tab.on{background:var(--sand);color:var(--night)}
 .search{width:100%;margin-top:12px;background:var(--surface);border:1px solid var(--line);
   border-radius:13px;padding:11px 14px;color:var(--sand);font-size:14px}
@@ -93,9 +96,22 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .pill.stock{background:transparent;color:var(--teal);border:1px solid var(--teal)}
 .pill.client{background:var(--saffron);color:#241804;border:1px solid var(--saffron)}
 .pill.sent{background:var(--sky);color:#0B1226;border:1px solid var(--sky)}
+.pill.off{background:transparent;color:var(--clay);border:1px solid var(--clay)}
 .row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;margin-top:8px}
 .row .r{font-family:var(--mono);text-align:right;letter-spacing:-.01em}
 .win{border-top:1px solid var(--line);padding-top:11px;margin-top:12px}
+.floor{background:var(--night);border:1px solid var(--line);border-radius:14px;padding:12px 13px;margin-top:14px}
+.floor b{font-family:var(--mono);letter-spacing:-.02em;font-size:15px}
+.dl{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  border-bottom:1px solid var(--line);padding:12px 0}
+.dl .nm{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.dl .dsub{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.45}
+.dl .val{font-family:var(--mono);text-align:right;white-space:nowrap;font-size:14px}
+.dl .val .s{display:block;font-size:11px;color:var(--dim);margin-top:3px}
+.tot{display:flex;justify-content:space-between;gap:12px;margin-top:13px;padding-top:12px;
+  border-top:1px solid var(--line);font-weight:650;font-size:14px}
+.tot .mono{font-size:15px}
+.tot.eind{border-top:2px solid var(--azure);margin-top:20px}
 .win b{font-family:var(--mono);letter-spacing:-.02em;font-size:15px}
 
 /* ── klant en betaling ── */
@@ -155,6 +171,9 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .seg button.on-sold{background:var(--mint);color:#0C2119}
 .seg button.on-sent{background:var(--sky);color:#0B1226}
 .seg.three button{font-size:13px;padding:11px 4px;white-space:nowrap}
+.seg button.on-off{background:var(--clay);color:#FDEEEC}
+.seg.four{flex-wrap:wrap}
+.seg.four button{flex:1 1 44%;font-size:13px;padding:11px 4px;white-space:nowrap}
 .soldbox{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:4px 15px 18px;margin-top:12px}
 .soldbox .label{margin-top:16px}
 .profit{font-family:var(--mono);font-size:14px;margin-top:11px;line-height:1.7}
@@ -337,17 +356,47 @@ function kostenEUR(it){return toEUR(it.costT,it.costTCur||'EUR')+toEUR(it.costP,
 /* prijs die de collega kent; niet ingevuld = jouw echte inkoop */
 function doorEUR(it){var v=num(it.told);return v>0?toEUR(it.told,it.toldCur||'MAD'):toEUR(it.buy,it.buyCur)}
 
+/* wat het toestel jou heeft gekost: inkoop plus transport en onderdelen */
+function kostprijsEUR(it){return toEUR(it.buy,it.buyCur)+kostenEUR(it)}
+
+/* de twee ondergrenzen bij verkoop: die van jou, en die van het verhaal naar je collega */
+function grenzen(it){
+  var eigen=kostprijsEUR(it), samen=doorEUR(it);
+  return {eigen:eigen, samen:samen};
+}
+
+/* hoe lang je geld al in dit toestel zit */
+function dagenSinds(sd){
+  if(!sd)return -1;
+  var d=new Date(sd); if(isNaN(d))return -1;
+  return Math.max(0,Math.floor((new Date().setHours(0,0,0,0)-d.setHours(0,0,0,0))/86400000));
+}
+function dagenTekst(it){
+  var n=dagenSinds(it.sent?(it.sentAt||it.boughtAt):it.boughtAt);
+  if(n<0)return '';
+  if(n===0)return it.sent?'vandaag verstuurd':'vandaag ingekocht';
+  return n+' '+(n===1?'dag':'dagen')+' '+(it.sent?'onderweg':'op voorraad');
+}
+
 function statusOf(it){
+  if(it.off)return 'off';
   if(!it.sold)return it.sent?'sent':'stock';
   var rest=toEUR(it.sell,it.sellCur)-paidEUR(it);
   return rest>0.01?'client':'paid';
 }
-var STATUSLABEL={stock:'Op voorraad',sent:'Verstuurd',client:'Bij klant',paid:'Betaald'};
+var STATUSLABEL={stock:'Op voorraad',sent:'Verstuurd',client:'Bij klant',paid:'Betaald',off:'Afgeschreven'};
 
 function totals(){
-  var t={mijn:0,onze:0,open:0,invest:0,voorraad:0,verstuurd:0,verkocht:0,bijklant:0};
+  var t={mijn:0,onze:0,open:0,invest:0,voorraad:0,verstuurd:0,verkocht:0,bijklant:0,af:0,verloren:0};
   S.items.forEach(function(it){
     var inkoop=toEUR(it.buy,it.buyCur), door=doorEUR(it), kost=kostenEUR(it);
+    if(it.off){
+      /* afgeschreven: dit geld staat niet meer vast, het is weg. Ook voor je
+         collega, want zijn inleg was de doorgegeven prijs. */
+      t.af++; t.verloren+=inkoop+kost;
+      t.mijn-=inkoop+kost; t.onze-=door;
+      return;
+    }
     if(it.sold){
       t.verkocht++;
       var uit=toEUR(it.sell,it.sellCur);
@@ -416,7 +465,7 @@ function render(){
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v11</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v12</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -431,15 +480,15 @@ function render(){
    + '<div class="zellige"></div></div>';
 
   h+='<div class="pad"><div class="stats">'
-   + '<div class="stat"><div class="k">Mijn winst'+lock()+'</div><div class="v" style="color:'+(t.mijn>=0?'var(--mint)':'var(--clay)')+'">'+pv(eur(t.mijn))+'</div><div class="s">'+pv(mad(t.mijn*S.rate))+'</div></div>'
-   + '<div class="stat"><div class="k">Geïnvesteerd'+lock()+'</div><div class="v">'+pv(eur(t.invest))+'</div><div class="s">'+(t.verstuurd>0?(t.voorraad+' hier &middot; '+t.verstuurd+' verstuurd'):(t.voorraad+' op voorraad'))+'</div></div>'
+   + '<button class="stat" data-act="drill" data-k="winst"><div class="k">Mijn winst'+lock()+' <span style="color:var(--azure)">&rsaquo;</span></div><div class="v" style="color:'+(t.mijn>=0?'var(--mint)':'var(--clay)')+'">'+pv(eur(t.mijn))+'</div><div class="s">'+pv(mad(t.mijn*S.rate))+'</div></button>'
+   + '<button class="stat" data-act="drill" data-k="invest"><div class="k">Geïnvesteerd'+lock()+' <span style="color:var(--azure)">&rsaquo;</span></div><div class="v">'+pv(eur(t.invest))+'</div><div class="s">'+(t.verstuurd>0?(t.voorraad+' hier &middot; '+t.verstuurd+' verstuurd'):(t.voorraad+' op voorraad'))+'</div></button>'
    + '</div>'
    + '<div class="band"><div class="k">Onze winst samen</div><div class="v">'+mad(t.onze*S.rate)+'</div>'
    + '<div class="s">'+eur(t.onze)+' &middot; gerekend met de doorgegeven prijzen</div>'
    + '<div class="segsm"><button class="'+(ui.lang==='ar'?'on':'')+'" data-act="lang" data-l="ar">عربي</button>'
    + '<button class="'+(ui.lang==='nl'?'on':'')+'" data-act="lang" data-l="nl">Nederlands</button></div>'
    + '<button class="go" data-act="share">Doorgeven via WhatsApp</button></div>'
-   + '<div class="meta"><span>'+t.verkocht+' verkocht &middot; '+t.bijklant+' bij klant</span>'
+   + '<div class="meta"><span>'+t.verkocht+' verkocht &middot; '+t.bijklant+' bij klant'+(t.af>0?(' &middot; '+t.af+' afgeschreven'):'')+'</span>'
    + '<span>'+(t.open>0.01?('nog te krijgen '+mad(t.open*S.rate)):'niets openstaand')+'</span></div>';
 
   if(ui.msg) h+='<div class="warn">'+esc(ui.msg)+'</div>';
@@ -451,9 +500,10 @@ function render(){
   }
 
   h+='<div class="tabs">'
-   + tabBtn('all','Alles')+tabBtn('stock','Voorraad')+tabBtn('sent','Verstuurd')+tabBtn('client','Bij klant')+tabBtn('paid','Betaald')
+   + tabBtn('all','Alles')+tabBtn('stock','Voorraad')+tabBtn('sent','Verstuurd')+tabBtn('client','Bij klant')+tabBtn('paid','Betaald')+tabBtn('off','Afgeschreven')
    + '</div>';
   if(S.items.length>5) h+='<input class="search" id="q" placeholder="Zoek op model of klant" value="'+esc(ui.q)+'">';
+  h+=tabTotaal(list);
   h+='</div><div class="pad">';
 
   if(!list.length){
@@ -473,6 +523,30 @@ function render(){
   if(pf)pf.focus();
 }
 
+/* wat de toestellen in dit tabblad samen betekenen */
+function tabTotaal(list){
+  if(!list.length)return '';
+  var n=list.length, links=n+' '+(n===1?'toestel':'toestellen'), rechts='';
+  if(ui.tab==='client'){
+    var open=0;
+    list.forEach(function(it){open+=Math.max(0,toEUR(it.sell,it.sellCur)-paidEUR(it))});
+    rechts='nog te krijgen '+mad(open*S.rate);
+  } else if(ui.tab==='paid'){
+    var w=0;
+    list.forEach(function(it){w+=toEUR(it.sell,it.sellCur)-kostprijsEUR(it)});
+    rechts=pv('winst '+eur(w));
+  } else if(ui.tab==='off'){
+    var v=0;
+    list.forEach(function(it){v+=kostprijsEUR(it)});
+    rechts=pv('verlies '+eur(v));
+  } else {
+    var inv=0;
+    list.forEach(function(it){if(!it.sold&&!it.off)inv+=kostprijsEUR(it)});
+    if(inv>0.005)rechts=pv(eur(inv))+' vast';
+  }
+  return '<div class="meta" style="margin-top:10px"><span>'+links+'</span><span>'+rechts+'</span></div>';
+}
+
 function tabBtn(k,label){return '<button class="tab'+(ui.tab===k?' on':'')+'" data-act="tab" data-k="'+k+'">'+label+'</button>'}
 
 function card(it){
@@ -484,8 +558,9 @@ function card(it){
   h+='<div class="chead"><div><div class="cname">'+esc(it.brand)+' '+esc(it.model)+'</div><div class="cmeta">'
    + [it.storage?esc(it.storage):'',
       num(it.battery)>0?('accu <b style="font-weight:600;color:'+(it.battery>=90?'var(--mint)':(it.battery>=80?'var(--saffron)':'var(--clay)'))+'">'+num(it.battery)+'%</b>'):'',
-      it.sold?('verkocht '+dateNL(it.soldAt)):(it.sent?('verstuurd '+dateNL(it.sentAt||it.boughtAt)):('ingekocht '+dateNL(it.boughtAt)))].filter(Boolean).join(' &middot; ')
-   + '</div></div><button class="pill '+({stock:'stock',sent:'sent',client:'client',paid:'sold'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
+      it.sold?('verkocht '+dateNL(it.soldAt)):(it.sent?('verstuurd '+dateNL(it.sentAt||it.boughtAt)):('ingekocht '+dateNL(it.boughtAt))),
+      (!it.sold&&!it.off)?dagenTekst(it):''].filter(Boolean).join(' &middot; ')
+   + '</div></div><button class="pill '+({stock:'stock',sent:'sent',client:'client',paid:'sold',off:'off'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
 
   var door=doorEUR(it), marge=door-inkoop, onze=verkoop-door;
   h+='<div class="row"><span class="dim">Inkoop'+lock()+'</span><span class="r">'+pv(eur(inkoop)+' <span class="dim">&middot; '+mad(inkoop*S.rate)+'</span>')+'</span></div>';
@@ -501,6 +576,30 @@ function card(it){
     h+='<div class="row"><span class="dim">Kosten'+lock()+'</span><span class="r">'+pv(eur(kost)+' <span class="dim">&middot; '+mad(kost*S.rate)+'</span>')+'</span></div>';
     if(!S.hide)h+='<div class="row" style="margin-top:3px"><span class="dim" style="font-size:12px">'+deel.join(' &middot; ')+'</span><span></span></div>';
   }
+  if(!it.sold&&!it.off){
+    /* waar de verkoop minimaal op uit moet komen */
+    var g=grenzen(it);
+    h+='<div class="floor"><div class="row" style="margin-top:0"><span style="font-weight:500">Minimaal'+lock()+'</span>'
+     + '<span class="r"><b>'+pv(mad(g.eigen*S.rate))+'</b>'+(S.hide?'':' <span class="dim">&middot; '+eur(g.eigen)+'</span>')+'</span></div>'
+     + '<div class="dim" style="font-size:12px;margin-top:3px">om quitte te staan &mdash; inkoop plus kosten</div>';
+    if(g.samen>g.eigen+0.005){
+      h+='<div class="row"><span style="font-weight:500;color:var(--azure)">Beter vanaf</span>'
+       + '<span class="r"><b style="color:var(--azure)">'+mad(g.samen*S.rate)+'</b> <span class="dim">&middot; '+eur(g.samen)+'</span></span></div>'
+       + '<div class="dim" style="font-size:12px;margin-top:3px">dan klopt het ook naar je collega</div>';
+    } else if(num(it.told)>0){
+      h+='<div class="dim" style="font-size:12px;margin-top:3px">let op: je doorgegeven prijs ligt hieronder</div>';
+    }
+    h+='</div>';
+  }
+
+  if(it.off){
+    var kwijt=kostprijsEUR(it);
+    h+='<div class="floor" style="border-color:var(--clay)"><div class="row" style="margin-top:0">'
+     + '<span style="font-weight:500;color:var(--clay)">Verloren</span>'
+     + '<span class="r"><b style="color:var(--clay)">'+pv('&minus; '+eur(kwijt))+'</b>'+(S.hide?'':' <span class="dim">&middot; '+mad(kwijt*S.rate)+'</span>')+'</span></div>'
+     + '<div class="dim" style="font-size:12px;margin-top:3px">'+(it.offWhy?esc(it.offWhy):'afgeschreven')+(it.offAt?(' &middot; '+dateNL(it.offAt)):'')+'</div></div>';
+  }
+
   if(it.sold){
     h+='<div class="row"><span class="dim">Verkoop</span><span class="r">'+eur(verkoop)+' <span class="dim">&middot; '+mad(verkoop*S.rate)+'</span></span></div>';
     h+='<div class="row win"><span style="font-weight:500">Mijn winst'+lock()+'</span><span class="r"><b style="color:'+(winst>=0?'var(--mint)':'var(--clay)')+'">'
@@ -569,7 +668,7 @@ function openForm(item){
   var selE=it&&it.sell?comma(toEUR(it.sell,it.sellCur),2):'';
   var selM=it&&it.sell?String(Math.round(toMAD(it.sell,it.sellCur))):'';
   var sold=it?!!it.sold:false;
-  var st=sold?'sold':((it&&it.sent)?'sent':'stock');
+  var st=(it&&it.off)?'off':(sold?'sold':((it&&it.sent)?'sent':'stock'));
   var toldCur=it?(it.toldCur||'MAD'):'MAD';
   var toldM=it&&num(it.told)>0?String(Math.round(toMAD(it.told,toldCur))):'';
   var toldE=it&&num(it.told)>0?comma(toEUR(it.told,toldCur),2):'';
@@ -605,10 +704,21 @@ function openForm(item){
 
   h+='<div class="label">Ingekocht op</div><input class="in" type="date" id="f_bought" value="'+esc(it?(it.boughtAt||today()):today())+'">';
 
-  h+='<div class="label">Status</div><div class="seg three" id="f_seg">'
+  h+='<div class="label">Waar moet je minimaal voor verkopen</div><div class="profit" id="f_floor"></div>';
+
+  h+='<div class="label">Status</div><div class="seg four" id="f_seg">'
    + '<button data-st="stock" class="'+(st==='stock'?'on-stock':'')+'">Op voorraad</button>'
    + '<button data-st="sent" class="'+(st==='sent'?'on-sent':'')+'">Verstuurd</button>'
-   + '<button data-st="sold" class="'+(st==='sold'?'on-sold':'')+'">Verkocht</button></div>';
+   + '<button data-st="sold" class="'+(st==='sold'?'on-sold':'')+'">Verkocht</button>'
+   + '<button data-st="off" class="'+(st==='off'?'on-off':'')+'">Afgeschreven</button></div>';
+
+  h+='<div id="offBox" '+(st==='off'?'':'hidden')+'><div class="soldbox" style="border-color:var(--clay)">'
+   + '<div class="label">Wat is er gebeurd</div>'
+   + '<input class="in" id="f_offwhy" placeholder="bv. miskoop, scherm stuk, kwijt onderweg" value="'+esc(it?(it.offWhy||''):'')+'">'
+   + '<div class="label">Afgeschreven op</div><input class="in" type="date" id="f_off" value="'+esc(it?(it.offAt||today()):today())+'">'
+   + '<div class="hint">Voor een toestel dat je niet meer gaat verkopen. Hij gaat uit je voorraad en '
+   + 'de inkoop plus kosten komen als verlies van je winst af, ook van de winst samen.</div>'
+   + '</div></div>';
 
   h+='<div id="sentBox" '+(st==='sent'?'':'hidden')+'><div class="soldbox">'
    + '<div class="label">Verstuurd op</div><input class="in" type="date" id="f_sent" value="'+esc(it?(it.sentAt||today()):today())+'">'
@@ -635,7 +745,7 @@ function openForm(item){
   var el=document.getElementById('sheet');
   el.innerHTML=h;
   el.dataset.id=it?it.id:'';
-  el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.st=st; el.dataset.sentAt=it?(it.sentAt||''):''; el.dataset.toldCur=toldCur;
+  el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.st=st; el.dataset.sentAt=it?(it.sentAt||''):''; el.dataset.offAt=it?(it.offAt||''):''; el.dataset.toldCur=toldCur;
   el.dataset.costTCur=it?(it.costTCur||'EUR'):'EUR'; el.dataset.costPCur=it?(it.costPCur||'EUR'):'EUR';
   el.dataset.payments=JSON.stringify(it&&it.payments?it.payments:[]);
   el.dataset.created=it?(it.createdAt||''):'';
@@ -691,6 +801,16 @@ function openForm(item){
     var m=sE-bE-kEUR, o=sE-dE;
     p.innerHTML='<span style="color:'+(m>=0?'var(--mint)':'var(--clay)')+'">mijn winst '+eur(m)+' &middot; '+mad(m*S.rate)+'</span>'
       + '<br><span style="color:var(--azure)">onze winst '+mad(o*S.rate)+' &middot; '+eur(o)+'</span>';
+    var fl=document.getElementById('f_floor');
+    if(fl){
+      var eigen=bE+kEUR;
+      var u='<span class="dim">minimaal</span> '+mad(eigen*S.rate)+' <span class="dim">&middot; '+eur(eigen)+'</span>';
+      if(dE>eigen+0.005)
+        u+='<br><span style="color:var(--azure)">beter vanaf '+mad(dE*S.rate)+' &middot; '+eur(dE)+'</span>';
+      else if(dE>0.005&&num((document.getElementById('f_toldM')||{}).value)>0)
+        u+='<br><span class="dim">je doorgegeven prijs ligt hieronder</span>';
+      fl.innerHTML=u;
+    }
   }
   profit();
 
@@ -710,8 +830,10 @@ function setStatusSeg(s){
   btns[0].className=s==='stock'?'on-stock':'';
   btns[1].className=s==='sent'?'on-sent':'';
   btns[2].className=s==='sold'?'on-sold':'';
+  btns[3].className=s==='off'?'on-off':'';
   document.getElementById('sentBox').hidden=s!=='sent';
   document.getElementById('soldBox').hidden=s!=='sold';
+  document.getElementById('offBox').hidden=s!=='off';
 }
 
 function savePhone(){
@@ -722,7 +844,7 @@ function savePhone(){
   var finalBrand=brand==='Anders'?((bFree&&bFree.value.trim())||'Anders'):brand;
   var finalModel=brand==='Anders'?(mFree?mFree.value.trim():''):(mSel?mSel.value:'');
   var st=el.dataset.st||'stock';
-  var sold=st==='sold', sent=st==='sent';
+  var sold=st==='sold', sent=st==='sent', off=st==='off';
   var buyCur=el.dataset.buyCur||'EUR', sellCur=el.dataset.sellCur||'MAD';
   var buy=buyCur==='MAD'?num(document.getElementById('f_buyM').value):num(document.getElementById('f_buyE').value);
   var sell=0;
@@ -758,6 +880,9 @@ function savePhone(){
     boughtAt:document.getElementById('f_bought').value,
     sent:sent,
     sentAt:(sent||el.dataset.sentAt)?((document.getElementById('f_sent')||{}).value||''):'',
+    off:off,
+    offAt:(off||el.dataset.offAt)?((document.getElementById('f_off')||{}).value||''):'',
+    offWhy:off?(((document.getElementById('f_offwhy')||{}).value||'').trim()):'',
     soldAt:sold?document.getElementById('f_sold').value:'',
     note:(document.getElementById('f_note').value||'').trim()
   };
@@ -772,6 +897,96 @@ function savePhone(){
 }
 
 /* ── instellingen ── */
+/* de tegels aantikken: alles per telefoon eronder */
+function openDrill(k){
+  var t=totals();
+  function naam(it){return esc(it.brand+' '+it.model+(it.storage?' '+it.storage:''))}
+  function regel(nm,sub,val,vsub,kleur){
+    return '<div class="dl"><div><div class="nm">'+nm+'</div><div class="dsub">'+sub+'</div></div>'
+     + '<div class="val"><b'+(kleur?' style="color:'+kleur+'"':'')+'>'+val+'</b>'
+     + (vsub?'<span class="s">'+vsub+'</span>':'')+'</div></div>';
+  }
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">'+(k==='invest'?'Geïnvesteerd per telefoon':'Winst per telefoon')+'</div></div>';
+
+  if(k==='invest'){
+    var open=S.items.filter(function(x){return !x.sold&&!x.off});
+    if(!open.length){
+      h+='<div class="note">Je hebt op dit moment niets op voorraad. Alles is verkocht.</div>';
+    }
+    [['stock','Hier op voorraad'],['sent','Onderweg naar Marokko']].forEach(function(soort){
+      var deel=open.filter(function(x){return soort[0]==='sent'?!!x.sent:!x.sent})
+        .sort(function(a,b){return kostprijsEUR(b)-kostprijsEUR(a)});
+      if(!deel.length)return;
+      h+='<div class="label">'+soort[1]+'</div>';
+      deel.forEach(function(it){
+        var ink=toEUR(it.buy,it.buyCur);
+        var kt=toEUR(it.costT,it.costTCur||'EUR'), kp=toEUR(it.costP,it.costPCur||'EUR');
+        var tot=ink+kt+kp, d=['inkoop '+eur(ink)];
+        if(kt>0.005)d.push('transport '+eur(kt));
+        if(kp>0.005)d.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(kp));
+        var dg=dagenTekst(it);
+        h+=regel(naam(it), pv(d.join(' &middot; '))+(dg?'<br>'+dg:''), pv(eur(tot)), pv(mad(tot*S.rate)));
+      });
+      var som=0;
+      deel.forEach(function(x){som+=kostprijsEUR(x)});
+      h+='<div class="tot"><span>'+deel.length+' '+(deel.length===1?'toestel':'toestellen')+'</span>'
+       + '<span class="mono">'+pv(eur(som))+'</span></div>';
+    });
+    if(open.length){
+      h+='<div class="tot eind"><span>Alles bij elkaar</span><span class="mono">'+pv(eur(t.invest))+'</span></div>'
+       + '<div class="note">Dit is jouw geld dat nu vastzit: inkoop plus transport en vervangen onderdelen. '
+       + 'Zodra je een toestel verkoopt verdwijnt het uit deze lijst.</div>';
+    }
+  } else {
+    var verk=[];
+    S.items.forEach(function(it){
+      if(it.sold)verk.push({it:it, w:toEUR(it.sell,it.sellCur)-kostprijsEUR(it)});
+    });
+    verk.sort(function(a,b){return b.w-a.w});
+    if(!verk.length){
+      h+='<div class="note">Je hebt nog niets verkocht, dus er is nog geen winst te zien.</div>';
+    } else {
+      h+='<div class="label">Verkocht &middot; beste bovenaan</div>';
+      verk.forEach(function(r){
+        var it=r.it, goed=r.w>=0;
+        var d=[it.customer?esc(it.customer):'zonder naam'];
+        if(it.soldAt)d.push(dateNL(it.soldAt));
+        var rest=Math.max(0,toEUR(it.sell,it.sellCur)-paidEUR(it));
+        if(rest>0.01)d.push('nog '+mad(rest*S.rate));
+        h+=regel(naam(it), d.join(' &middot; '),
+          pv((goed?'+ ':'&minus; ')+eur(Math.abs(r.w))), pv(mad(Math.abs(r.w)*S.rate)),
+          goed?'var(--mint)':'var(--clay)');
+      });
+      var som=0;
+      verk.forEach(function(r){som+=r.w});
+      h+='<div class="tot"><span>'+verk.length+' verkocht</span><span class="mono">'+pv(eur(som))+'</span></div>'
+       + '<div class="note">Gemiddeld '+pv(eur(som/verk.length))+' per toestel.</div>';
+    }
+    var afg=S.items.filter(function(x){return x.off});
+    if(afg.length){
+      h+='<div class="label">Afgeschreven &middot; dit ben je kwijt</div>';
+      afg.sort(function(a,b){return kostprijsEUR(b)-kostprijsEUR(a)}).forEach(function(it){
+        var d=[];
+        if(it.offWhy)d.push(esc(it.offWhy));
+        if(it.offAt)d.push(dateNL(it.offAt));
+        h+=regel(naam(it), d.join(' &middot; ')||'geen reden ingevuld',
+          pv('&minus; '+eur(kostprijsEUR(it))), pv(mad(kostprijsEUR(it)*S.rate)), 'var(--clay)');
+      });
+      h+='<div class="tot"><span>'+afg.length+' afgeschreven</span>'
+       + '<span class="mono" style="color:var(--clay)">'+pv('&minus; '+eur(t.verloren))+'</span></div>';
+    }
+    if(verk.length||afg.length){
+      h+='<div class="tot eind"><span>Jouw winst nu</span><span class="mono">'+pv(eur(t.mijn))+'</span></div>'
+       + '<div class="note">Dit is je eigen winst: verkoop min je echte inkoop, min transport en onderdelen, '
+       + 'min wat je hebt afgeschreven. Wat je collega ziet staat op het hoofdscherm bij <b>onze winst</b>.</div>';
+    }
+  }
+
+  h+='</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+}
+
 function openSettings(){
   var t=totals();
   var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
@@ -830,7 +1045,7 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 11 &middot; september 2026</div>'
+   + '<div class="ver">Telefoonboek versie 12 &middot; september 2026</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
@@ -856,9 +1071,9 @@ function openSettings(){
 
 /* ── doorstuurbericht, Arabisch of Nederlands ── */
 var TXT={
-  ar:{onderweg:'\u0641\u064A \u0627\u0644\u0637\u0631\u064A\u0642', titel:'دفتر الهواتف', verkocht:'تم البيع', voorraad:'في المخزون',
+  ar:{afgeschreven:'\u062E\u0633\u0627\u0631\u0629', onderweg:'\u0641\u064A \u0627\u0644\u0637\u0631\u064A\u0642', titel:'دفتر الهواتف', verkocht:'تم البيع', voorraad:'في المخزون',
       inkoop:'الشراء', verkoop:'البيع', winst:'الربح', samen:'الربح المشترك', dh:'درهم'},
-  nl:{titel:'Telefoonboek', verkocht:'VERKOCHT', voorraad:'NOG OP VOORRAAD', onderweg:'ONDERWEG NAAR MAROKKO',
+  nl:{titel:'Telefoonboek', verkocht:'VERKOCHT', voorraad:'NOG OP VOORRAAD', onderweg:'ONDERWEG NAAR MAROKKO', afgeschreven:'AFGESCHREVEN',
       inkoop:'inkoop', verkoop:'verkoop', winst:'winst', samen:'WINST SAMEN', dh:'DH'}
 };
 function bedrag(eurBedrag,lang){
@@ -869,8 +1084,9 @@ function shareText(lang){
   var d=new Date(), dd=('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();
   var L=[T.titel+' — '+dd];
   var verkocht=S.items.filter(function(x){return x.sold});
-  var onderweg=S.items.filter(function(x){return !x.sold&&x.sent});
-  var voorraad=S.items.filter(function(x){return !x.sold&&!x.sent});
+  var onderweg=S.items.filter(function(x){return !x.sold&&!x.off&&x.sent});
+  var voorraad=S.items.filter(function(x){return !x.sold&&!x.off&&!x.sent});
+  var afgeschreven=S.items.filter(function(x){return x.off});
   function naam(it){return it.brand+' '+it.model+(it.storage?' '+it.storage:'')}
   if(verkocht.length){
     L.push('',T.verkocht);
@@ -887,6 +1103,10 @@ function shareText(lang){
   if(voorraad.length){
     L.push('',T.voorraad);
     voorraad.forEach(function(it){L.push('- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorEUR(it),lang))});
+  }
+  if(afgeschreven.length){
+    L.push('',T.afgeschreven);
+    afgeschreven.forEach(function(it){L.push('- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorEUR(it),lang))});
   }
   L.push('',T.samen+': '+bedrag(t.onze,lang));
   return L.join('\n');
@@ -1194,6 +1414,7 @@ document.addEventListener('click',function(e){
   if(act==='close'){closeSheet();render();return}
   if(act==='savephone'){savePhone();return}
   if(act==='settings'){openSettings();return}
+  if(act==='drill'){openDrill(b.dataset.k);return}
   if(act==='rate1030'){S.rate=10.3;save();openSettings();render();return}
   if(act==='download'){download();return}
   if(act==='sharebackup'){shareBackup(b);return}
@@ -1297,6 +1518,8 @@ document.addEventListener('click',function(e){
   if(act==='tipoff'){ui.tipOff=true;try{localStorage.setItem(KEY+'_tip','1')}catch(err){}render();return}
 
   if(act==='toggle'){
+    /* een afgeschreven toestel niet per ongeluk terugzetten: open het formulier */
+    if(it.off){openForm(it);return}
     /* op voorraad -> verstuurd -> verkocht, en met nog een tik weer terug */
     if(!it.sold&&!it.sent){it.sent=true; it.sentAt=today(); save();render();return}
     if(!it.sold){
