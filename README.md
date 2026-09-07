@@ -12,7 +12,8 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Inkoop en verkoop per toestel, in euro's en dirham, met een instelbare koers
 - Een tweede, doorgegeven inkoopprijs, zodat je eigen marge privé blijft
 - Kosten voor transport en vervangen onderdelen
-- Drie standen: op voorraad, bij klant (verkocht maar niet afbetaald), betaald
+- Vier standen: op voorraad, verstuurd (onderweg naar Marokko), bij klant
+  (verkocht maar niet afbetaald), betaald
 - Betalingen per klant, met wat er nog open staat
 - Accupercentage en IMEI
 - Controlelijst met testcodes per merk, voor bij de inkoop
