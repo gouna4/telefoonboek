@@ -194,6 +194,10 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .tips ul{margin:8px 0 0;padding-left:18px}
 .tips li{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:4px}
 .warn{background:#2E1A14;border:1px solid var(--clay);border-radius:13px;padding:13px;margin-top:12px;font-size:14px;line-height:1.5}
+.warn .x{float:right;color:var(--dim);padding:0 0 10px 14px;font-size:18px;line-height:1}
+.warn .go{width:100%;margin-top:12px;background:var(--azure);color:#1B1108;border-radius:12px;
+  padding:12px;font-weight:700;font-size:14px}
+.metabtn{color:var(--azure);font-weight:600;font-size:12px;padding:0;text-align:right}
 
 /* ── kosten, codes, vinkjes ── */
 .costrow{display:flex;align-items:center;gap:8px;margin-top:8px}
@@ -270,7 +274,7 @@ var CATALOG={
 var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false,snaps:[]};
-var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false};
+var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false};
 
 function load(){
   try{
@@ -335,7 +339,18 @@ function toEUR(a,cur){return cur==='MAD'?num(a)/(S.rate||1):num(a)}
 function toMAD(a,cur){return cur==='MAD'?num(a):num(a)*(S.rate||1)}
 function today(){return new Date().toISOString().slice(0,10)}
 function dateNL(s){if(!s)return '';var d=new Date(s);if(isNaN(d))return '';return d.toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})}
-function paidEUR(it){return (it.payments||[]).reduce(function(s,p){return s+toEUR(p.amount,p.cur)},0)}
+/* ── de koers die bij een toestel hoort ──
+   Zolang een toestel nog niet verkocht is rekent de app met de koers van nu.
+   Zodra je verkoopt wordt de koers van die dag bij het toestel bewaard, zodat
+   je winst van vorige maanden niet meer verschuift als je de koers aanpast. */
+function kr(it){var r=num(it&&it.rate);return r>0?r:S.rate}
+function toEURk(it,a,cur){return cur==='MAD'?num(a)/(kr(it)||1):num(a)}
+function toMADk(it,a,cur){return cur==='MAD'?num(a):num(a)*kr(it)}
+
+function paidEUR(it){return (it.payments||[]).reduce(function(s,p){return s+toEURk(it,p.amount,p.cur)},0)}
+/* wat de klant echt nog moet betalen, in dirham, zonder omrekenen heen en terug */
+function paidMAD(it){var s2=0;(it.payments||[]).forEach(function(p){s2+=toMADk(it,p.amount,p.cur)});return s2}
+function restMAD(it){return Math.max(0,toMADk(it,it.sell,it.sellCur)-paidMAD(it))}
 /* privécijfer: verborgen als het oog uit staat */
 function pv(s){return S.hide?'••••':s}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
@@ -351,13 +366,13 @@ function standalone(){
 function lock(){return '<svg class="lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'}
 
 /* transport en onderdelen: alleen jouw kosten */
-function kostenEUR(it){return toEUR(it.costT,it.costTCur||'EUR')+toEUR(it.costP,it.costPCur||'EUR')}
+function kostenEUR(it){return toEURk(it,it.costT,it.costTCur||'EUR')+toEURk(it,it.costP,it.costPCur||'EUR')}
 
 /* prijs die de collega kent; niet ingevuld = jouw echte inkoop */
-function doorEUR(it){var v=num(it.told);return v>0?toEUR(it.told,it.toldCur||'MAD'):toEUR(it.buy,it.buyCur)}
+function doorEUR(it){var v=num(it.told);return v>0?toEURk(it,it.told,it.toldCur||'MAD'):toEURk(it,it.buy,it.buyCur)}
 
 /* wat het toestel jou heeft gekost: inkoop plus transport en onderdelen */
-function kostprijsEUR(it){return toEUR(it.buy,it.buyCur)+kostenEUR(it)}
+function kostprijsEUR(it){return toEURk(it,it.buy,it.buyCur)+kostenEUR(it)}
 
 /* de twee ondergrenzen bij verkoop: die van jou, en die van het verhaal naar je collega */
 function grenzen(it){
@@ -381,15 +396,15 @@ function dagenTekst(it){
 function statusOf(it){
   if(it.off)return 'off';
   if(!it.sold)return it.sent?'sent':'stock';
-  var rest=toEUR(it.sell,it.sellCur)-paidEUR(it);
+  var rest=toEURk(it,it.sell,it.sellCur)-paidEUR(it);
   return rest>0.01?'client':'paid';
 }
 var STATUSLABEL={stock:'Op voorraad',sent:'Verstuurd',client:'Bij klant',paid:'Betaald',off:'Afgeschreven'};
 
 function totals(){
-  var t={mijn:0,onze:0,open:0,invest:0,voorraad:0,verstuurd:0,verkocht:0,bijklant:0,af:0,verloren:0};
+  var t={mijn:0,onze:0,open:0,openMAD:0,invest:0,voorraad:0,verstuurd:0,verkocht:0,bijklant:0,af:0,verloren:0};
   S.items.forEach(function(it){
-    var inkoop=toEUR(it.buy,it.buyCur), door=doorEUR(it), kost=kostenEUR(it);
+    var inkoop=toEURk(it,it.buy,it.buyCur), door=doorEUR(it), kost=kostenEUR(it);
     if(it.off){
       /* afgeschreven: dit geld staat niet meer vast, het is weg. Ook voor je
          collega, want zijn inleg was de doorgegeven prijs. */
@@ -399,9 +414,10 @@ function totals(){
     }
     if(it.sold){
       t.verkocht++;
-      var uit=toEUR(it.sell,it.sellCur);
+      var uit=toEURk(it,it.sell,it.sellCur);
       t.mijn+=uit-inkoop-kost; t.onze+=uit-door;
       t.open+=Math.max(0,uit-paidEUR(it));
+      t.openMAD+=restMAD(it);
       if(statusOf(it)==='client')t.bijklant++;
     } else {if(it.sent)t.verstuurd++;else t.voorraad++;t.invest+=inkoop+kost;}
   });
@@ -459,13 +475,13 @@ function render(){
     .filter(function(it){
       var q=ui.q.trim().toLowerCase();
       if(!q)return true;
-      return [it.brand,it.model,it.storage,it.customer,it.note].join(' ').toLowerCase().indexOf(q)>-1;
+      return [it.brand,it.model,it.storage,it.customer,it.note,it.imei].join(' ').toLowerCase().indexOf(q)>-1;
     })
     .sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''))});
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v12</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v13</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -489,9 +505,12 @@ function render(){
    + '<button class="'+(ui.lang==='nl'?'on':'')+'" data-act="lang" data-l="nl">Nederlands</button></div>'
    + '<button class="go" data-act="share">Doorgeven via WhatsApp</button></div>'
    + '<div class="meta"><span>'+t.verkocht+' verkocht &middot; '+t.bijklant+' bij klant'+(t.af>0?(' &middot; '+t.af+' afgeschreven'):'')+'</span>'
-   + '<span>'+(t.open>0.01?('nog te krijgen '+mad(t.open*S.rate)):'niets openstaand')+'</span></div>';
+   + (t.verkocht>0
+      ? '<button class="metabtn" data-act="drill" data-k="klanten">'+(t.openMAD>0.5?('nog te krijgen '+mad(t.openMAD)):'niets openstaand')+' &rsaquo;</button>'
+      : '<span>niets openstaand</span>')+'</div>';
 
   if(ui.msg) h+='<div class="warn">'+esc(ui.msg)+'</div>';
+  h+=backupWaarschuwing();
 
   if(!standalone() && !ui.tipOff){
     h+='<div class="tip"><button class="close" data-act="tipoff" aria-label="Sluiten">&times;</button>'
@@ -524,16 +543,31 @@ function render(){
 }
 
 /* wat de toestellen in dit tabblad samen betekenen */
+/* Je boek staat alleen op deze telefoon. Na een week zonder back-up:
+   een strook bovenaan, want in de instellingen kijkt niemand vanzelf. */
+function backupWaarschuwing(){
+  if(ui.bkOff||!S.items.length)return '';
+  var dagen=S.lastBackup?dagenSinds(S.lastBackup):-1;
+  if(S.lastBackup&&dagen>=0&&dagen<7)return '';
+  var kop=(S.lastBackup&&dagen>=0)
+    ? ('Laatste back-up '+dagen+' '+(dagen===1?'dag':'dagen')+' geleden')
+    : 'Je hebt nog geen back-up gemaakt';
+  return '<div class="warn"><button class="x" data-act="bkoff" aria-label="Sluiten">&times;</button>'
+   + '<b>'+kop+'</b><br>Je '+S.items.length+' toestellen staan alleen op dit toestel. '
+   + 'Raak je je telefoon kwijt, dan is je boek weg.'
+   + '<button class="go" data-act="sharebackup">Nu een back-up maken</button></div>';
+}
+
 function tabTotaal(list){
   if(!list.length)return '';
   var n=list.length, links=n+' '+(n===1?'toestel':'toestellen'), rechts='';
   if(ui.tab==='client'){
     var open=0;
-    list.forEach(function(it){open+=Math.max(0,toEUR(it.sell,it.sellCur)-paidEUR(it))});
-    rechts='nog te krijgen '+mad(open*S.rate);
+    list.forEach(function(it){open+=restMAD(it)});
+    rechts='nog te krijgen '+mad(open);
   } else if(ui.tab==='paid'){
     var w=0;
-    list.forEach(function(it){w+=toEUR(it.sell,it.sellCur)-kostprijsEUR(it)});
+    list.forEach(function(it){w+=toEURk(it,it.sell,it.sellCur)-kostprijsEUR(it)});
     rechts=pv('winst '+eur(w));
   } else if(ui.tab==='off'){
     var v=0;
@@ -550,7 +584,7 @@ function tabTotaal(list){
 function tabBtn(k,label){return '<button class="tab'+(ui.tab===k?' on':'')+'" data-act="tab" data-k="'+k+'">'+label+'</button>'}
 
 function card(it){
-  var inkoop=toEUR(it.buy,it.buyCur), verkoop=toEUR(it.sell,it.sellCur);
+  var inkoop=toEURk(it,it.buy,it.buyCur), verkoop=toEURk(it,it.sell,it.sellCur);
   var kost=kostenEUR(it);
   var winst=verkoop-inkoop-kost, betaald=paidEUR(it), rest=Math.max(0,verkoop-betaald);
   var pct=verkoop>0?betaald/verkoop*100:0, klaar=it.sold&&verkoop>0&&rest<0.01;
@@ -563,28 +597,28 @@ function card(it){
    + '</div></div><button class="pill '+({stock:'stock',sent:'sent',client:'client',paid:'sold',off:'off'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
 
   var door=doorEUR(it), marge=door-inkoop, onze=verkoop-door;
-  h+='<div class="row"><span class="dim">Inkoop'+lock()+'</span><span class="r">'+pv(eur(inkoop)+' <span class="dim">&middot; '+mad(inkoop*S.rate)+'</span>')+'</span></div>';
+  h+='<div class="row"><span class="dim">Inkoop'+lock()+'</span><span class="r">'+pv(eur(inkoop)+' <span class="dim">&middot; '+mad(inkoop*kr(it))+'</span>')+'</span></div>';
   if(num(it.told)>0){
-    h+='<div class="row"><span class="dim">Doorgegeven</span><span class="r">'+mad(door*S.rate)+' <span class="dim">&middot; '+eur(door)+'</span></span></div>';
+    h+='<div class="row"><span class="dim">Doorgegeven</span><span class="r">'+mad(door*kr(it))+' <span class="dim">&middot; '+eur(door)+'</span></span></div>';
     if(Math.abs(marge)>0.005)
-      h+='<div class="row" style="margin-top:4px"><span class="dim" style="font-size:12px">eigen marge'+lock()+'</span><span class="r dim" style="font-size:12px">'+pv(eur(marge)+' &middot; '+mad(marge*S.rate))+'</span></div>';
+      h+='<div class="row" style="margin-top:4px"><span class="dim" style="font-size:12px">eigen marge'+lock()+'</span><span class="r dim" style="font-size:12px">'+pv(eur(marge)+' &middot; '+mad(marge*kr(it)))+'</span></div>';
   }
   if(kost>0.005){
     var deel=[];
-    if(num(it.costT)>0)deel.push('transport '+eur(toEUR(it.costT,it.costTCur||'EUR')));
-    if(num(it.costP)>0)deel.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(toEUR(it.costP,it.costPCur||'EUR')));
-    h+='<div class="row"><span class="dim">Kosten'+lock()+'</span><span class="r">'+pv(eur(kost)+' <span class="dim">&middot; '+mad(kost*S.rate)+'</span>')+'</span></div>';
+    if(num(it.costT)>0)deel.push('transport '+eur(toEURk(it,it.costT,it.costTCur||'EUR')));
+    if(num(it.costP)>0)deel.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(toEURk(it,it.costP,it.costPCur||'EUR')));
+    h+='<div class="row"><span class="dim">Kosten'+lock()+'</span><span class="r">'+pv(eur(kost)+' <span class="dim">&middot; '+mad(kost*kr(it))+'</span>')+'</span></div>';
     if(!S.hide)h+='<div class="row" style="margin-top:3px"><span class="dim" style="font-size:12px">'+deel.join(' &middot; ')+'</span><span></span></div>';
   }
   if(!it.sold&&!it.off){
     /* waar de verkoop minimaal op uit moet komen */
     var g=grenzen(it);
     h+='<div class="floor"><div class="row" style="margin-top:0"><span style="font-weight:500">Minimaal'+lock()+'</span>'
-     + '<span class="r"><b>'+pv(mad(g.eigen*S.rate))+'</b>'+(S.hide?'':' <span class="dim">&middot; '+eur(g.eigen)+'</span>')+'</span></div>'
+     + '<span class="r"><b>'+pv(mad(g.eigen*kr(it)))+'</b>'+(S.hide?'':' <span class="dim">&middot; '+eur(g.eigen)+'</span>')+'</span></div>'
      + '<div class="dim" style="font-size:12px;margin-top:3px">om quitte te staan &mdash; inkoop plus kosten</div>';
     if(g.samen>g.eigen+0.005){
       h+='<div class="row"><span style="font-weight:500;color:var(--azure)">Beter vanaf</span>'
-       + '<span class="r"><b style="color:var(--azure)">'+mad(g.samen*S.rate)+'</b> <span class="dim">&middot; '+eur(g.samen)+'</span></span></div>'
+       + '<span class="r"><b style="color:var(--azure)">'+mad(g.samen*kr(it))+'</b> <span class="dim">&middot; '+eur(g.samen)+'</span></span></div>'
        + '<div class="dim" style="font-size:12px;margin-top:3px">dan klopt het ook naar je collega</div>';
     } else if(num(it.told)>0){
       h+='<div class="dim" style="font-size:12px;margin-top:3px">let op: je doorgegeven prijs ligt hieronder</div>';
@@ -596,24 +630,27 @@ function card(it){
     var kwijt=kostprijsEUR(it);
     h+='<div class="floor" style="border-color:var(--clay)"><div class="row" style="margin-top:0">'
      + '<span style="font-weight:500;color:var(--clay)">Verloren</span>'
-     + '<span class="r"><b style="color:var(--clay)">'+pv('&minus; '+eur(kwijt))+'</b>'+(S.hide?'':' <span class="dim">&middot; '+mad(kwijt*S.rate)+'</span>')+'</span></div>'
+     + '<span class="r"><b style="color:var(--clay)">'+pv('&minus; '+eur(kwijt))+'</b>'+(S.hide?'':' <span class="dim">&middot; '+mad(kwijt*kr(it))+'</span>')+'</span></div>'
      + '<div class="dim" style="font-size:12px;margin-top:3px">'+(it.offWhy?esc(it.offWhy):'afgeschreven')+(it.offAt?(' &middot; '+dateNL(it.offAt)):'')+'</div></div>';
   }
 
   if(it.sold){
-    h+='<div class="row"><span class="dim">Verkoop</span><span class="r">'+eur(verkoop)+' <span class="dim">&middot; '+mad(verkoop*S.rate)+'</span></span></div>';
+    h+='<div class="row"><span class="dim">Verkoop</span><span class="r">'+eur(verkoop)+' <span class="dim">&middot; '+mad(toMADk(it,it.sell,it.sellCur))+'</span></span></div>';
+    if(num(it.rate)>0&&Math.abs(num(it.rate)-S.rate)>0.005)
+      h+='<div class="row" style="margin-top:4px"><span class="dim" style="font-size:12px">koers van de verkoopdag</span>'
+       + '<span class="r dim" style="font-size:12px">1 &euro; = '+comma(num(it.rate),2)+' DH</span></div>';
     h+='<div class="row win"><span style="font-weight:500">Mijn winst'+lock()+'</span><span class="r"><b style="color:'+(winst>=0?'var(--mint)':'var(--clay)')+'">'
-     + pv((winst<0?'&minus; ':'+ ')+eur(Math.abs(winst)))+'</b> <span class="dim">'+(S.hide?'':'&middot; '+mad(Math.abs(winst)*S.rate))+'</span></span></div>';
+     + pv((winst<0?'&minus; ':'+ ')+eur(Math.abs(winst)))+'</b> <span class="dim">'+(S.hide?'':'&middot; '+mad(Math.abs(winst)*kr(it)))+'</span></span></div>';
     h+='<div class="row"><span style="font-weight:500;color:var(--azure)">Onze winst</span><span class="r"><b style="color:var(--azure)">'
-     + mad(onze*S.rate)+'</b> <span class="dim">&middot; '+eur(onze)+'</span></span></div>';
+     + mad(onze*kr(it))+'</b> <span class="dim">&middot; '+eur(onze)+'</span></span></div>';
 
     h+='<div class="box"><div class="row" style="margin-top:0"><span style="font-weight:500">'+(esc(it.customer)||'Klant')+'</span>'
-     + '<span class="mono" style="font-size:12px;color:'+(klaar?'var(--mint)':'var(--saffron)')+'">'+(klaar?'volledig betaald':'nog '+mad(rest*S.rate))+'</span></div>';
+     + '<span class="mono" style="font-size:12px;color:'+(klaar?'var(--mint)':'var(--saffron)')+'">'+(klaar?'volledig betaald':'nog '+mad(restMAD(it)))+'</span></div>';
     h+='<div class="tiles">';
     var filled=Math.max(0,Math.min(10,Math.round(pct/10)));
     for(var i=0;i<10;i++)h+='<span class="tile"'+(i<filled?' style="background:'+(klaar?'var(--mint)':'var(--saffron)')+'"':'')+'></span>';
     h+='</div>';
-    h+='<div class="mono dim" style="font-size:12px;margin-top:9px">'+mad(betaald*S.rate)+' / '+mad(verkoop*S.rate)+' betaald</div>';
+    h+='<div class="mono dim" style="font-size:12px;margin-top:9px">'+mad(paidMAD(it))+' / '+mad(toMADk(it,it.sell,it.sellCur))+' betaald</div>';
     if((it.payments||[]).length){
       h+='<div class="plist">';
       it.payments.forEach(function(p){
@@ -663,15 +700,15 @@ function openForm(item){
   var brand=it?(known?it.brand:'Anders'):'iPhone';
   var model=it?(known?it.model:''):'13 Pro Max';
   var buyCur=it?it.buyCur:'EUR', sellCur=it?(it.sellCur||'MAD'):'MAD';
-  var buyE=it&&it.buy?comma(toEUR(it.buy,it.buyCur),2):'';
+  var buyE=it&&it.buy?comma(toEURk(it,it.buy,it.buyCur),2):'';
   var buyM=it&&it.buy?String(Math.round(toMAD(it.buy,it.buyCur))):'';
-  var selE=it&&it.sell?comma(toEUR(it.sell,it.sellCur),2):'';
+  var selE=it&&it.sell?comma(toEURk(it,it.sell,it.sellCur),2):'';
   var selM=it&&it.sell?String(Math.round(toMAD(it.sell,it.sellCur))):'';
   var sold=it?!!it.sold:false;
   var st=(it&&it.off)?'off':(sold?'sold':((it&&it.sent)?'sent':'stock'));
   var toldCur=it?(it.toldCur||'MAD'):'MAD';
   var toldM=it&&num(it.told)>0?String(Math.round(toMAD(it.told,toldCur))):'';
-  var toldE=it&&num(it.told)>0?comma(toEUR(it.told,toldCur),2):'';
+  var toldE=it&&num(it.told)>0?comma(toEURk(it,it.told,toldCur),2):'';
 
   var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
    + '<div class="t">'+(it?'Telefoon bewerken':'Nieuwe telefoon')+'</div></div>';
@@ -736,16 +773,21 @@ function openForm(item){
    + '<div class="label">Nu al betaald</div><input class="in mono" id="f_firstpay" inputmode="decimal" placeholder="0">'
    + '<div class="hint">Latere betalingen zet je er op de kaart bij.</div>'
    + '<div class="label">Verkocht op</div><input class="in" type="date" id="f_sold" value="'+esc(it?(it.soldAt||today()):today())+'">'
+   + '<div class="label">Koers bij verkoop</div><input class="in mono" id="f_rate" inputmode="decimal" value="'+esc(comma(num(it&&it.rate)>0?num(it.rate):S.rate,2))+'">'
+   + '<div class="hint">De koers van de dag dat je verkocht. Die blijft bij dit toestel horen, ook als je de koers bovenaan later verandert. '
+   + 'Zo verschuift je winst van vorige maanden niet meer.</div>'
    + '</div></div>';
 
   h+='<div class="label">Notitie</div><input class="in" id="f_note" placeholder="kleur, IMEI, staat, batterij…" value="'+esc(it?it.note:'')+'">';
+  h+='<div id="f_warn"></div>';
   h+='</div><div class="sbar"><div class="sbar-in"><button class="cancel" data-act="close">Annuleren</button>'
    + '<button class="save" data-act="savephone">Opslaan</button></div></div></div>';
 
   var el=document.getElementById('sheet');
   el.innerHTML=h;
   el.dataset.id=it?it.id:'';
-  el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.st=st; el.dataset.sentAt=it?(it.sentAt||''):''; el.dataset.offAt=it?(it.offAt||''):''; el.dataset.toldCur=toldCur;
+  el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.st=st; el.dataset.sentAt=it?(it.sentAt||''):''; el.dataset.offAt=it?(it.offAt||''):'';
+  el.dataset.rate=it&&num(it.rate)>0?String(num(it.rate)):''; el.dataset.toldCur=toldCur;
   el.dataset.costTCur=it?(it.costTCur||'EUR'):'EUR'; el.dataset.costPCur=it?(it.costPCur||'EUR'):'EUR';
   el.dataset.payments=JSON.stringify(it&&it.payments?it.payments:[]);
   el.dataset.created=it?(it.createdAt||''):'';
@@ -767,12 +809,21 @@ function openForm(item){
   drawType();
   brandSel.addEventListener('change',function(){model='';drawType()});
 
+  /* het formulier rekent met de koers die bij dit toestel hoort: het veld
+     'Koers bij verkoop' als dat is ingevuld, anders de koers van nu */
+  function koersNu(){
+    var f=document.getElementById('f_rate');
+    var r=f?num(f.value):0;
+    return r>0?r:S.rate;
+  }
+
   function pair(a,b,cur,rev){
     var A=document.getElementById(a),B=document.getElementById(b);
     if(!A||!B)return;
     A.addEventListener('input',function(){
       el.dataset[cur]=rev?'MAD':'EUR';
-      B.value=A.value===''?'':(rev?comma(num(A.value)/(S.rate||1),2):String(Math.round(num(A.value)*S.rate)));
+      var kn=koersNu();
+      B.value=A.value===''?'':(rev?comma(num(A.value)/(kn||1),2):String(Math.round(num(A.value)*kn)));
       profit();
     });
   }
@@ -782,7 +833,7 @@ function openForm(item){
   pair('f_selM','f_selE','sellCur',true);
   pair('f_toldM','f_toldE','toldCur',true);
   pair('f_toldE','f_toldM','toldCur',false);
-  ['f_costT','f_costP'].forEach(function(id){
+  ['f_costT','f_costP','f_rate'].forEach(function(id){
     var f=document.getElementById(id);
     if(f)f.addEventListener('input',profit);
   });
@@ -796,17 +847,17 @@ function openForm(item){
     var kEUR=0;
     ['costT','costP'].forEach(function(k){
       var f=document.getElementById(k==='costT'?'f_costT':'f_costP');
-      if(f)kEUR+=(el.dataset[k+'Cur']==='MAD'?num(f.value)/(S.rate||1):num(f.value));
+      if(f)kEUR+=(el.dataset[k+'Cur']==='MAD'?num(f.value)/(koersNu()||1):num(f.value));
     });
-    var m=sE-bE-kEUR, o=sE-dE;
-    p.innerHTML='<span style="color:'+(m>=0?'var(--mint)':'var(--clay)')+'">mijn winst '+eur(m)+' &middot; '+mad(m*S.rate)+'</span>'
-      + '<br><span style="color:var(--azure)">onze winst '+mad(o*S.rate)+' &middot; '+eur(o)+'</span>';
+    var m=sE-bE-kEUR, o=sE-dE, kn=koersNu();
+    p.innerHTML='<span style="color:'+(m>=0?'var(--mint)':'var(--clay)')+'">mijn winst '+eur(m)+' &middot; '+mad(m*kn)+'</span>'
+      + '<br><span style="color:var(--azure)">onze winst '+mad(o*kn)+' &middot; '+eur(o)+'</span>';
     var fl=document.getElementById('f_floor');
     if(fl){
       var eigen=bE+kEUR;
-      var u='<span class="dim">minimaal</span> '+mad(eigen*S.rate)+' <span class="dim">&middot; '+eur(eigen)+'</span>';
+      var u='<span class="dim">minimaal</span> '+mad(eigen*kn)+' <span class="dim">&middot; '+eur(eigen)+'</span>';
       if(dE>eigen+0.005)
-        u+='<br><span style="color:var(--azure)">beter vanaf '+mad(dE*S.rate)+' &middot; '+eur(dE)+'</span>';
+        u+='<br><span style="color:var(--azure)">beter vanaf '+mad(dE*kn)+' &middot; '+eur(dE)+'</span>';
       else if(dE>0.005&&num((document.getElementById('f_toldM')||{}).value)>0)
         u+='<br><span class="dim">je doorgegeven prijs ligt hieronder</span>';
       fl.innerHTML=u;
@@ -883,10 +934,40 @@ function savePhone(){
     off:off,
     offAt:(off||el.dataset.offAt)?((document.getElementById('f_off')||{}).value||''):'',
     offWhy:off?(((document.getElementById('f_offwhy')||{}).value||'').trim()):'',
+    rate:(function(){
+      /* alleen een afgerond verhaal krijgt een vaste koers: verkocht of afgeschreven */
+      if(!sold&&!off)return 0;
+      var f=document.getElementById('f_rate');
+      if(sold&&f&&num(f.value)>0)return num(f.value);
+      var oud=num(el.dataset.rate);
+      return oud>0?oud:S.rate;
+    })(),
     soldAt:sold?document.getElementById('f_sold').value:'',
     note:(document.getElementById('f_note').value||'').trim()
   };
   var id=el.dataset.id;
+
+  /* Staat deze IMEI al in je boek? Een keer waarschuwen; tik je nog een keer
+     op Opslaan, dan gaat het door. Zo boek je hetzelfde toestel niet twee keer. */
+  var imeiPlat=String(base.imei||'').replace(/[^0-9]/g,'');
+  if(imeiPlat&&el.dataset.imeiOk!=='1'){
+    var dub=null;
+    S.items.forEach(function(x){
+      if(x.id!==id&&String(x.imei||'').replace(/[^0-9]/g,'')===imeiPlat)dub=x;
+    });
+    if(dub){
+      el.dataset.imeiOk='1';
+      var w=document.getElementById('f_warn');
+      if(w){
+        w.innerHTML='<div class="warn">Deze IMEI staat al in je boek bij <b>'+esc(dub.brand+' '+dub.model)+'</b>'
+         + (dub.customer?(' van '+esc(dub.customer)):'')+'. '
+         + 'Tik nog een keer op Opslaan als dit toch een ander toestel is.</div>';
+        w.scrollIntoView();
+      }
+      return;
+    }
+  }
+
   if(id){
     S.items=S.items.map(function(x){return x.id===id?Object.assign({},x,base):x});
   } else {
@@ -897,6 +978,24 @@ function savePhone(){
 }
 
 /* ── instellingen ── */
+/* korte herinnering voor een klant die nog moet betalen; labels uit het bonnetje */
+function herinnerTekst(it,lang){
+  var B2=BON[lang]||BON.nl, nm=String(it.customer||'').trim();
+  var totaal=0, lijst=[];
+  S.items.forEach(function(x){
+    if(!x.sold)return;
+    if(String(x.customer||'').trim().toLowerCase()!==nm.toLowerCase())return;
+    var r=restMAD(x);
+    if(r>0.5){totaal+=r;lijst.push(x.brand+' '+x.model+(x.storage?' '+x.storage:''))}
+  });
+  var L=[];
+  if(nm)L.push(nm);
+  if(lijst.length)L.push(lijst.join(', '));
+  L.push(B2.rest+': '+mad(totaal));
+  L.push(B2.dank);
+  return L.join('\n');
+}
+
 /* de tegels aantikken: alles per telefoon eronder */
 function openDrill(k){
   var t=totals();
@@ -907,7 +1006,7 @@ function openDrill(k){
      + (vsub?'<span class="s">'+vsub+'</span>':'')+'</div></div>';
   }
   var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
-   + '<div class="t">'+(k==='invest'?'Geïnvesteerd per telefoon':'Winst per telefoon')+'</div></div>';
+   + '<div class="t">'+({invest:'Geïnvesteerd per telefoon',winst:'Winst per telefoon',klanten:'Wie moet nog betalen'}[k]||'Overzicht')+'</div></div>';
 
   if(k==='invest'){
     var open=S.items.filter(function(x){return !x.sold&&!x.off});
@@ -920,13 +1019,13 @@ function openDrill(k){
       if(!deel.length)return;
       h+='<div class="label">'+soort[1]+'</div>';
       deel.forEach(function(it){
-        var ink=toEUR(it.buy,it.buyCur);
-        var kt=toEUR(it.costT,it.costTCur||'EUR'), kp=toEUR(it.costP,it.costPCur||'EUR');
+        var ink=toEURk(it,it.buy,it.buyCur);
+        var kt=toEURk(it,it.costT,it.costTCur||'EUR'), kp=toEURk(it,it.costP,it.costPCur||'EUR');
         var tot=ink+kt+kp, d=['inkoop '+eur(ink)];
         if(kt>0.005)d.push('transport '+eur(kt));
         if(kp>0.005)d.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(kp));
         var dg=dagenTekst(it);
-        h+=regel(naam(it), pv(d.join(' &middot; '))+(dg?'<br>'+dg:''), pv(eur(tot)), pv(mad(tot*S.rate)));
+        h+=regel(naam(it), pv(d.join(' &middot; '))+(dg?'<br>'+dg:''), pv(eur(tot)), pv(mad(tot*kr(it))));
       });
       var som=0;
       deel.forEach(function(x){som+=kostprijsEUR(x)});
@@ -938,10 +1037,62 @@ function openDrill(k){
        + '<div class="note">Dit is jouw geld dat nu vastzit: inkoop plus transport en vervangen onderdelen. '
        + 'Zodra je een toestel verkoopt verdwijnt het uit deze lijst.</div>';
     }
+  } else if(k==='klanten'){
+    var per={}, orde=[];
+    S.items.forEach(function(it){
+      if(!it.sold)return;
+      var nm=String(it.customer||'').trim()||'zonder naam', sl=nm.toLowerCase();
+      if(!per[sl]){per[sl]={naam:nm,openMAD:0,aantal:0,openAantal:0,oudste:'',bron:null};orde.push(sl)}
+      var r=per[sl];
+      r.aantal++;
+      var rest=restMAD(it);
+      if(rest>0.5){
+        r.openMAD+=rest; r.openAantal++;
+        if(!r.oudste||String(it.soldAt||'')<r.oudste)r.oudste=String(it.soldAt||'');
+        if(!r.bron||(it.phone&&!r.bron.phone))r.bron=it;
+      }
+    });
+    var rijen=[];
+    orde.forEach(function(sl){rijen.push(per[sl])});
+    var openR=rijen.filter(function(r){return r.openMAD>0.5}).sort(function(a,b){return b.openMAD-a.openMAD});
+    var klaarR=rijen.filter(function(r){return r.openMAD<=0.5}).sort(function(a,b){return b.aantal-a.aantal});
+
+    if(!rijen.length) h+='<div class="note">Je hebt nog niets verkocht, dus er zijn nog geen klanten.</div>';
+
+    if(openR.length){
+      h+='<div class="label">Moet nog betalen &middot; meeste bovenaan</div>';
+      openR.forEach(function(r){
+        var d=[r.openAantal+' van '+r.aantal+' '+(r.aantal===1?'toestel':'toestellen')+' open'];
+        if(r.oudste){
+          var dg=dagenSinds(r.oudste);
+          d.push('oudste '+dateNL(r.oudste)+(dg>0?(' &middot; '+dg+' '+(dg===1?'dag':'dagen')):''));
+        }
+        h+='<div class="dl"><div><div class="nm">'+esc(r.naam)+'</div><div class="dsub">'+d.join('<br>')+'</div></div>'
+         + '<div class="val"><b style="color:var(--saffron)">'+mad(r.openMAD)+'</b>'
+         + '<span class="s">'+eur(r.openMAD/(S.rate||1))+'</span></div></div>';
+        if(r.bron&&r.bron.phone)
+          h+='<button class="ghost" data-act="remind" data-id="'+r.bron.id+'">Herinnering naar '+esc(r.naam)+' via WhatsApp</button>';
+      });
+      var somOpen=0;
+      openR.forEach(function(r){somOpen+=r.openMAD});
+      h+='<div class="tot"><span>'+openR.length+' '+(openR.length===1?'klant':'klanten')+'</span>'
+       + '<span class="mono" style="color:var(--saffron)">'+mad(somOpen)+'</span></div>';
+    }
+    if(klaarR.length){
+      h+='<div class="label">Helemaal betaald</div>';
+      klaarR.forEach(function(r){
+        h+='<div class="dl"><div><div class="nm">'+esc(r.naam)+'</div>'
+         + '<div class="dsub">'+r.aantal+' '+(r.aantal===1?'toestel':'toestellen')+'</div></div>'
+         + '<div class="val"><b style="color:var(--mint)">klaar</b></div></div>';
+      });
+    }
+    if(openR.length)
+      h+='<div class="note">De herinnering opent WhatsApp met de naam, de toestellen en wat er nog open staat. '
+       + 'Je eigen inkoop en je winst staan er niet in.</div>';
   } else {
     var verk=[];
     S.items.forEach(function(it){
-      if(it.sold)verk.push({it:it, w:toEUR(it.sell,it.sellCur)-kostprijsEUR(it)});
+      if(it.sold)verk.push({it:it, w:toEURk(it,it.sell,it.sellCur)-kostprijsEUR(it)});
     });
     verk.sort(function(a,b){return b.w-a.w});
     if(!verk.length){
@@ -952,10 +1103,10 @@ function openDrill(k){
         var it=r.it, goed=r.w>=0;
         var d=[it.customer?esc(it.customer):'zonder naam'];
         if(it.soldAt)d.push(dateNL(it.soldAt));
-        var rest=Math.max(0,toEUR(it.sell,it.sellCur)-paidEUR(it));
-        if(rest>0.01)d.push('nog '+mad(rest*S.rate));
+        var rest=Math.max(0,toEURk(it,it.sell,it.sellCur)-paidEUR(it));
+        if(rest>0.01)d.push('nog '+mad(restMAD(it)));
         h+=regel(naam(it), d.join(' &middot; '),
-          pv((goed?'+ ':'&minus; ')+eur(Math.abs(r.w))), pv(mad(Math.abs(r.w)*S.rate)),
+          pv((goed?'+ ':'&minus; ')+eur(Math.abs(r.w))), pv(mad(Math.abs(r.w)*kr(r.it))),
           goed?'var(--mint)':'var(--clay)');
       });
       var som=0;
@@ -971,7 +1122,7 @@ function openDrill(k){
         if(it.offWhy)d.push(esc(it.offWhy));
         if(it.offAt)d.push(dateNL(it.offAt));
         h+=regel(naam(it), d.join(' &middot; ')||'geen reden ingevuld',
-          pv('&minus; '+eur(kostprijsEUR(it))), pv(mad(kostprijsEUR(it)*S.rate)), 'var(--clay)');
+          pv('&minus; '+eur(kostprijsEUR(it))), pv(mad(kostprijsEUR(it)*kr(it))), 'var(--clay)');
       });
       h+='<div class="tot"><span>'+afg.length+' afgeschreven</span>'
        + '<span class="mono" style="color:var(--clay)">'+pv('&minus; '+eur(t.verloren))+'</span></div>';
@@ -995,7 +1146,8 @@ function openSettings(){
    + '<div style="display:flex;align-items:center;gap:10px"><span class="mono dim">1 &euro; =</span>'
    + '<input class="in mono" id="s_rate" inputmode="decimal" value="'+comma(S.rate,2)+'"><span class="mono dim">DH</span></div>'
    + '<button class="outline quiet" data-act="rate1030">Terug naar 10,30</button>'
-   + '<div class="note">Bedragen blijven staan in de valuta waarin je ze invulde. Alleen de omrekening volgt deze koers.</div>'
+   + '<div class="note">Bedragen blijven staan in de valuta waarin je ze invulde. Alleen de omrekening volgt deze koers. '
+   + 'Verkochte toestellen houden de koers van hun eigen verkoopdag, zodat je oude winst niet verschuift.</div>'
    + '<div class="divider"></div>'
    + '<div class="label">Jouw boek</div>'
    + '<div class="mono dim" style="font-size:14px">'+S.items.length+' toestellen &middot; '+t.verkocht+' verkocht &middot; winst '+eur(t.mijn)+'</div>'
@@ -1045,7 +1197,7 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 12 &middot; september 2026</div>'
+   + '<div class="ver">Telefoonboek versie 13 &middot; september 2026</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
@@ -1091,7 +1243,7 @@ function shareText(lang){
   if(verkocht.length){
     L.push('',T.verkocht);
     verkocht.forEach(function(it){
-      var dr=doorEUR(it), u=toEUR(it.sell,it.sellCur);
+      var dr=doorEUR(it), u=toEURk(it,it.sell,it.sellCur);
       L.push('- '+naam(it));
       L.push('  '+T.inkoop+' '+bedrag(dr,lang)+' | '+T.verkoop+' '+bedrag(u,lang)+' | '+T.winst+' '+bedrag(u-dr,lang));
     });
@@ -1331,7 +1483,7 @@ var BON={
 function receiptText(it,lang){
   var B=BON[lang], d=new Date();
   var dd=('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();
-  var prijs=toEUR(it.sell,it.sellCur), bet=paidEUR(it), rest=Math.max(0,prijs-bet);
+  var prijs=toEURk(it,it.sell,it.sellCur), bet=paidEUR(it), rest=Math.max(0,prijs-bet);
   var L=[B.titel+' — '+dd, it.brand+' '+it.model+(it.storage?' '+it.storage:'')];
   if(it.imei)L.push(B.imei+': '+it.imei);
   L.push(B.prijs+': '+bedrag(prijs,lang));
@@ -1415,6 +1567,10 @@ document.addEventListener('click',function(e){
   if(act==='savephone'){savePhone();return}
   if(act==='settings'){openSettings();return}
   if(act==='drill'){openDrill(b.dataset.k);return}
+  if(act==='remind'){
+    if(it&&it.phone)window.open('https://wa.me/'+waNumber(it.phone)+'?text='+encodeURIComponent(herinnerTekst(it,ui.lang)),'_blank');
+    return;
+  }
   if(act==='rate1030'){S.rate=10.3;save();openSettings();render();return}
   if(act==='download'){download();return}
   if(act==='sharebackup'){shareBackup(b);return}
@@ -1516,6 +1672,7 @@ document.addEventListener('click',function(e){
     return;
   }
   if(act==='tipoff'){ui.tipOff=true;try{localStorage.setItem(KEY+'_tip','1')}catch(err){}render();return}
+  if(act==='bkoff'){ui.bkOff=true;render();return}
 
   if(act==='toggle'){
     /* een afgeschreven toestel niet per ongeluk terugzetten: open het formulier */
@@ -1525,6 +1682,7 @@ document.addEventListener('click',function(e){
     if(!it.sold){
       if(!num(it.sell)){openForm(it); setStatusSeg('sold'); return}
       it.sold=true; it.soldAt=today(); it.sent=false;
+      if(!num(it.rate))it.rate=S.rate;   /* koers van vandaag vastzetten */
       save();render();return;
     }
     it.sold=false; it.soldAt=''; it.sent=!!it.sentAt;
