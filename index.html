@@ -250,7 +250,7 @@ var CATALOG={
 };
 var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
 
-var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false};
+var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false,snaps:[]};
 var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false};
 
 function load(){
@@ -266,13 +266,45 @@ function load(){
       if(d.lastBackup)S.lastBackup=d.lastBackup;
       if(d.pin)S.pin=d.pin;
       if(d.hide)S.hide=d.hide;
+      if(Array.isArray(d.snaps))S.snaps=d.snaps;
     }
     ui.tipOff=localStorage.getItem(KEY+'_tip')==='1';
   }catch(e){}
 }
+/* Voordat er iets verandert: bewaar de stand die er nu staat als herstelpunt.
+   Eén per dag, maximaal vijf. Zo kun je altijd terug zonder met bestanden te
+   hoeven slepen. Let op: dit staat op dit toestel — het vervangt een echte
+   back-up niet als je je telefoon kwijtraakt. */
+function snapshotBij(altijd){
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(!raw)return;
+    var d=JSON.parse(raw);
+    if(!d||!Array.isArray(d.items)||!d.items.length)return;
+    S.snaps=S.snaps||[];
+    var dag=today();
+    if(!altijd && S.snaps.length && S.snaps[0].dag===dag) return;
+    S.snaps.unshift({dag:dag, at:Date.now(), n:d.items.length,
+      data:JSON.stringify({v:1,rate:d.rate,items:d.items})});
+    S.snaps=S.snaps.slice(0,5);
+  }catch(e){}
+}
+
 function save(){
-  try{localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,pin:S.pin,hide:S.hide}));ui.msg='';return true;}
-  catch(e){ui.msg='Opslaan lukte niet. Maak ruimte vrij op je telefoon of maak eerst een back-up.';return false;}
+  snapshotBij(false);
+  for(var poging=0;poging<4;poging++){
+    try{
+      localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
+        checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,pin:S.pin,hide:S.hide,snaps:S.snaps}));
+      ui.msg='';return true;
+    }catch(e){
+      /* Geen ruimte? Dan gaan de oudste herstelpunten eraf; je eigen boek gaat voor. */
+      if(S.snaps&&S.snaps.length){S.snaps.pop();continue;}
+      ui.msg='Opslaan lukte niet. Maak ruimte vrij op je telefoon of maak eerst een back-up.';
+      return false;
+    }
+  }
+  return false;
 }
 
 /* ── rekenen en tonen ── */
@@ -384,7 +416,7 @@ function render(){
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v9</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v11</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -765,7 +797,29 @@ function openSettings(){
    + '<div id="backupBox"></div>'
    + '<div class="note">Je gegevens staan in deze app op dit toestel. Maak af en toe een back-up, dan kun je alles terugzetten of naar je andere telefoon overzetten.</div>'
    + '<div class="label">Back-up terugzetten</div>'
-   + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px"></textarea>'
+   + '<button class="outline" data-act="pickfile">Back-upbestand kiezen</button>'
+   + '<input type="file" id="s_file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'
+   + '<div class="hint">Zie je je bestand niet? Tik onderin op <b>Zoek</b> en typ <b>telefoonboek</b> in het zoekvak. '
+   + 'Of kijk bij <b>Op mijn iPhone</b> &rarr; <b>Downloads</b>.</div>'
+   + (function(){
+       var s=S.snaps||[];
+       if(!s.length) return '<div class="label">Herstelpunten in de app</div>'
+         + '<div class="hint" style="margin-top:0">Zodra je iets wijzigt bewaart de app hier zelf de vorige stand. Dan kun je terug zonder bestanden.</div>';
+       var u='<div class="label">Herstelpunten in de app</div>'
+         + '<div class="hint" style="margin-top:0">De app bewaart elke dag de stand van daarvoor. Eén tik en je bent terug.</div>';
+       s.forEach(function(p,i){
+         u+='<div class="r" style="display:flex;align-items:center;justify-content:space-between;gap:10px;'
+          + 'border-bottom:1px solid var(--line);padding:11px 0">'
+          + '<div><div class="nm" style="font-size:14px">'+dateNL(new Date(p.at).toISOString().slice(0,10))+'</div>'
+          + '<div class="ds mono" style="font-size:12px;color:var(--dim)">'+p.n+' toestellen</div></div>'
+          + '<button class="text-btn" data-act="snapback" data-i="'+i+'" style="color:var(--azure);font-weight:600;font-size:13px;padding:8px 4px">Terugzetten</button>'
+          + '</div>';
+       });
+       u+='<div class="hint">Deze punten staan op dit toestel. Raak je je telefoon kwijt, dan helpt alleen een back-upbestand.</div>';
+       return u;
+     })()
+   + '<div class="hint" style="margin-top:14px">Of plak de tekst van je back-up:</div>'
+   + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px;margin-top:6px"></textarea>'
    + '<button class="outline quiet" data-act="import">Terugzetten (overschrijft dit boek)</button>'
    + '<div class="note" id="importMsg"></div>'
    + '<div class="divider"></div>'
@@ -776,11 +830,27 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 9 &middot; september 2026</div>'
+   + '<div class="ver">Telefoonboek versie 11 &middot; september 2026</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
     var n=num(this.value); if(n>0){S.rate=n;save()}
+  });
+  document.getElementById('s_file').addEventListener('change',function(){
+    var f=this.files&&this.files[0];
+    if(!f)return;
+    var msg=document.getElementById('importMsg');
+    if(msg)msg.textContent='Bestand wordt gelezen…';
+    var lezer=new FileReader();
+    lezer.onload=function(){
+      zetTerug(String(lezer.result||''),
+        'Dit bestand is geen geldige back-up. Kies het bestand dat begint met "telefoonboek".');
+    };
+    lezer.onerror=function(){
+      var m=document.getElementById('importMsg');
+      if(m)m.textContent='Het bestand kon niet gelezen worden. Probeer het opnieuw.';
+    };
+    lezer.readAsText(f);
   });
 }
 
@@ -1002,6 +1072,28 @@ function openCheck(){
   document.getElementById('c_brand').addEventListener('change',function(){
     S.checkBrand=this.value; save(); openCheck();
   });
+}
+
+/* ── back-up terugzetten, uit een bestand of uit geplakte tekst ── */
+function zetTerug(tekst,foutmelding){
+  var d;
+  try{
+    d=JSON.parse(tekst);
+    if(!d||!Array.isArray(d.items))throw new Error('bad');
+  }catch(e){
+    var m=document.getElementById('importMsg');
+    if(m)m.textContent=foutmelding;
+    return false;
+  }
+  snapshotBij(true);   /* zodat je een verkeerde terugzetting kunt terugdraaien */
+  S.items=d.items;
+  if(d.rate)S.rate=d.rate;
+  if(d.checks)S.checks=d.checks;
+  if(d.lang)ui.lang=d.lang;
+  save(); render(); openSettings();
+  var m2=document.getElementById('importMsg');
+  if(m2)m2.textContent=d.items.length+' toestellen teruggezet. Kijk of je winst en je klanten er weer staan.';
+  return true;
 }
 
 /* ── bonnetje voor de klant ── */
@@ -1239,15 +1331,15 @@ document.addEventListener('click',function(e){
     } else b.textContent='Kopiëren lukt niet — gebruik het bestand';
     return;
   }
+  if(act==='pickfile'){document.getElementById('s_file').click();return}
+  if(act==='snapback'){
+    var p=(S.snaps||[])[+b.dataset.i];
+    if(p) zetTerug(p.data,'Dit herstelpunt is niet leesbaar.');
+    return;
+  }
   if(act==='import'){
-    var msg=document.getElementById('importMsg');
-    try{
-      var d=JSON.parse(document.getElementById('s_import').value);
-      if(!d||!Array.isArray(d.items))throw new Error('bad');
-      S.items=d.items; if(d.rate)S.rate=d.rate;
-      save();openSettings();render();
-      document.getElementById('importMsg').textContent=d.items.length+' toestellen teruggezet.';
-    }catch(err){msg.textContent='Deze tekst is geen geldige back-up. Kopieer hem nog een keer helemaal.'}
+    zetTerug(document.getElementById('s_import').value,
+      'Deze tekst is geen geldige back-up. Kopieer hem nog een keer helemaal.');
     return;
   }
 });
