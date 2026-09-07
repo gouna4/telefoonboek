@@ -12,8 +12,12 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Inkoop en verkoop per toestel, in euro's en dirham, met een instelbare koers
 - Een tweede, doorgegeven inkoopprijs, zodat je eigen marge privé blijft
 - Kosten voor transport en vervangen onderdelen
-- Vier standen: op voorraad, verstuurd (onderweg naar Marokko), bij klant
-  (verkocht maar niet afbetaald), betaald
+- Vijf standen: op voorraad, verstuurd (onderweg naar Marokko), bij klant
+  (verkocht maar niet afbetaald), betaald, afgeschreven
+- Per toestel waar je minimaal voor moet verkopen: om quitte te staan, en
+  om ook naar je collega uit te komen
+- Tik op Geinvesteerd of Mijn winst voor de cijfers per telefoon
+- Hoe lang je geld al in een toestel zit, en een totaal per tabblad
 - Betalingen per klant, met wat er nog open staat
 - Accupercentage en IMEI
 - Controlelijst met testcodes per merk, voor bij de inkoop
@@ -32,9 +36,9 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 Verhoog het nummer op drie plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `Marokko &middot; v11` in de kop
-2. `index.html` — `Telefoonboek versie 11` onderaan de instellingen
-3. `sw.js` — `telefoonboek-v11`
+1. `index.html` — `Marokko &middot; v12` in de kop
+2. `index.html` — `Telefoonboek versie 12` onderaan de instellingen
+3. `sw.js` — `telefoonboek-v12`
 
 ## Nooit in deze repo
 
