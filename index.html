@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Telefoonboek">
 <meta name="theme-color" content="#16120F">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="ICON_URI">
-<link rel="icon" type="image/png" href="ICON_URI">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <style>
 :root{
   /* warm leer en zellige in plaats van alles blauw */
@@ -22,6 +22,7 @@
   --saffron:#E7AE45;   /* geld dat nog moet komen */
   --clay:#B8483A;      /* weg / fout */
   --teal:#4E9E96;      /* op voorraad */
+  --sky:#6C8FD8;       /* verstuurd, onderweg naar Marokko */
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI Variable','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
   --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Roboto Mono',monospace;
 }
@@ -74,7 +75,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* ── tabbladen ── */
 .tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin-top:22px}
-.tab{flex:1;border-radius:10px;padding:9px 2px;font-size:13px;font-weight:600;color:var(--dim);letter-spacing:-.01em}
+.tab{flex:1;min-width:0;border-radius:10px;padding:9px 1px;font-size:12px;font-weight:600;color:var(--dim);letter-spacing:-.01em;white-space:nowrap}
 .tab.on{background:var(--sand);color:var(--night)}
 .search{width:100%;margin-top:12px;background:var(--surface);border:1px solid var(--line);
   border-radius:13px;padding:11px 14px;color:var(--sand);font-size:14px}
@@ -91,6 +92,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .pill.sold{background:var(--mint);color:#0C2119;border:1px solid var(--mint)}
 .pill.stock{background:transparent;color:var(--teal);border:1px solid var(--teal)}
 .pill.client{background:var(--saffron);color:#241804;border:1px solid var(--saffron)}
+.pill.sent{background:var(--sky);color:#0B1226;border:1px solid var(--sky)}
 .row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;margin-top:8px}
 .row .r{font-family:var(--mono);text-align:right;letter-spacing:-.01em}
 .win{border-top:1px solid var(--line);padding-top:11px;margin-top:12px}
@@ -151,6 +153,8 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .seg button{flex:1;border-radius:10px;padding:11px;font-size:14px;font-weight:600;color:var(--dim)}
 .seg button.on-stock{background:var(--teal);color:#08201E}
 .seg button.on-sold{background:var(--mint);color:#0C2119}
+.seg button.on-sent{background:var(--sky);color:#0B1226}
+.seg.three button{font-size:13px;padding:11px 4px;white-space:nowrap}
 .soldbox{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:4px 15px 18px;margin-top:12px}
 .soldbox .label{margin-top:16px}
 .profit{font-family:var(--mono);font-size:14px;margin-top:11px;line-height:1.7}
@@ -246,7 +250,7 @@ var CATALOG={
 };
 var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
 
-var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false,snaps:[]};
+var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false};
 var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false};
 
 function load(){
@@ -262,45 +266,13 @@ function load(){
       if(d.lastBackup)S.lastBackup=d.lastBackup;
       if(d.pin)S.pin=d.pin;
       if(d.hide)S.hide=d.hide;
-      if(Array.isArray(d.snaps))S.snaps=d.snaps;
     }
     ui.tipOff=localStorage.getItem(KEY+'_tip')==='1';
   }catch(e){}
 }
-/* Voordat er iets verandert: bewaar de stand die er nu staat als herstelpunt.
-   Eén per dag, maximaal vijf. Zo kun je altijd terug zonder met bestanden te
-   hoeven slepen. Let op: dit staat op dit toestel — het vervangt een echte
-   back-up niet als je je telefoon kwijtraakt. */
-function snapshotBij(altijd){
-  try{
-    var raw=localStorage.getItem(KEY);
-    if(!raw)return;
-    var d=JSON.parse(raw);
-    if(!d||!Array.isArray(d.items)||!d.items.length)return;
-    S.snaps=S.snaps||[];
-    var dag=today();
-    if(!altijd && S.snaps.length && S.snaps[0].dag===dag) return;
-    S.snaps.unshift({dag:dag, at:Date.now(), n:d.items.length,
-      data:JSON.stringify({v:1,rate:d.rate,items:d.items})});
-    S.snaps=S.snaps.slice(0,5);
-  }catch(e){}
-}
-
 function save(){
-  snapshotBij(false);
-  for(var poging=0;poging<4;poging++){
-    try{
-      localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
-        checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,pin:S.pin,hide:S.hide,snaps:S.snaps}));
-      ui.msg='';return true;
-    }catch(e){
-      /* Geen ruimte? Dan gaan de oudste herstelpunten eraf; je eigen boek gaat voor. */
-      if(S.snaps&&S.snaps.length){S.snaps.pop();continue;}
-      ui.msg='Opslaan lukte niet. Maak ruimte vrij op je telefoon of maak eerst een back-up.';
-      return false;
-    }
-  }
-  return false;
+  try{localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,pin:S.pin,hide:S.hide}));ui.msg='';return true;}
+  catch(e){ui.msg='Opslaan lukte niet. Maak ruimte vrij op je telefoon of maak eerst een back-up.';return false;}
 }
 
 /* ── rekenen en tonen ── */
@@ -334,14 +306,14 @@ function kostenEUR(it){return toEUR(it.costT,it.costTCur||'EUR')+toEUR(it.costP,
 function doorEUR(it){var v=num(it.told);return v>0?toEUR(it.told,it.toldCur||'MAD'):toEUR(it.buy,it.buyCur)}
 
 function statusOf(it){
-  if(!it.sold)return 'stock';
+  if(!it.sold)return it.sent?'sent':'stock';
   var rest=toEUR(it.sell,it.sellCur)-paidEUR(it);
   return rest>0.01?'client':'paid';
 }
-var STATUSLABEL={stock:'Op voorraad',client:'Bij klant',paid:'Betaald'};
+var STATUSLABEL={stock:'Op voorraad',sent:'Verstuurd',client:'Bij klant',paid:'Betaald'};
 
 function totals(){
-  var t={mijn:0,onze:0,open:0,invest:0,voorraad:0,verkocht:0,bijklant:0};
+  var t={mijn:0,onze:0,open:0,invest:0,voorraad:0,verstuurd:0,verkocht:0,bijklant:0};
   S.items.forEach(function(it){
     var inkoop=toEUR(it.buy,it.buyCur), door=doorEUR(it), kost=kostenEUR(it);
     if(it.sold){
@@ -350,7 +322,7 @@ function totals(){
       t.mijn+=uit-inkoop-kost; t.onze+=uit-door;
       t.open+=Math.max(0,uit-paidEUR(it));
       if(statusOf(it)==='client')t.bijklant++;
-    } else {t.voorraad++;t.invest+=inkoop+kost;}
+    } else {if(it.sent)t.verstuurd++;else t.voorraad++;t.invest+=inkoop+kost;}
   });
   return t;
 }
@@ -412,7 +384,7 @@ function render(){
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v10</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v9</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -428,7 +400,7 @@ function render(){
 
   h+='<div class="pad"><div class="stats">'
    + '<div class="stat"><div class="k">Mijn winst'+lock()+'</div><div class="v" style="color:'+(t.mijn>=0?'var(--mint)':'var(--clay)')+'">'+pv(eur(t.mijn))+'</div><div class="s">'+pv(mad(t.mijn*S.rate))+'</div></div>'
-   + '<div class="stat"><div class="k">Geïnvesteerd'+lock()+'</div><div class="v">'+pv(eur(t.invest))+'</div><div class="s">'+t.voorraad+' op voorraad</div></div>'
+   + '<div class="stat"><div class="k">Geïnvesteerd'+lock()+'</div><div class="v">'+pv(eur(t.invest))+'</div><div class="s">'+(t.verstuurd>0?(t.voorraad+' hier &middot; '+t.verstuurd+' verstuurd'):(t.voorraad+' op voorraad'))+'</div></div>'
    + '</div>'
    + '<div class="band"><div class="k">Onze winst samen</div><div class="v">'+mad(t.onze*S.rate)+'</div>'
    + '<div class="s">'+eur(t.onze)+' &middot; gerekend met de doorgegeven prijzen</div>'
@@ -447,7 +419,7 @@ function render(){
   }
 
   h+='<div class="tabs">'
-   + tabBtn('all','Alles')+tabBtn('stock','Voorraad')+tabBtn('client','Bij klant')+tabBtn('paid','Betaald')
+   + tabBtn('all','Alles')+tabBtn('stock','Voorraad')+tabBtn('sent','Verstuurd')+tabBtn('client','Bij klant')+tabBtn('paid','Betaald')
    + '</div>';
   if(S.items.length>5) h+='<input class="search" id="q" placeholder="Zoek op model of klant" value="'+esc(ui.q)+'">';
   h+='</div><div class="pad">';
@@ -480,8 +452,8 @@ function card(it){
   h+='<div class="chead"><div><div class="cname">'+esc(it.brand)+' '+esc(it.model)+'</div><div class="cmeta">'
    + [it.storage?esc(it.storage):'',
       num(it.battery)>0?('accu <b style="font-weight:600;color:'+(it.battery>=90?'var(--mint)':(it.battery>=80?'var(--saffron)':'var(--clay)'))+'">'+num(it.battery)+'%</b>'):'',
-      it.sold?('verkocht '+dateNL(it.soldAt)):('ingekocht '+dateNL(it.boughtAt))].filter(Boolean).join(' &middot; ')
-   + '</div></div><button class="pill '+({stock:'stock',client:'client',paid:'sold'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
+      it.sold?('verkocht '+dateNL(it.soldAt)):(it.sent?('verstuurd '+dateNL(it.sentAt||it.boughtAt)):('ingekocht '+dateNL(it.boughtAt)))].filter(Boolean).join(' &middot; ')
+   + '</div></div><button class="pill '+({stock:'stock',sent:'sent',client:'client',paid:'sold'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
 
   var door=doorEUR(it), marge=door-inkoop, onze=verkoop-door;
   h+='<div class="row"><span class="dim">Inkoop'+lock()+'</span><span class="r">'+pv(eur(inkoop)+' <span class="dim">&middot; '+mad(inkoop*S.rate)+'</span>')+'</span></div>';
@@ -565,6 +537,7 @@ function openForm(item){
   var selE=it&&it.sell?comma(toEUR(it.sell,it.sellCur),2):'';
   var selM=it&&it.sell?String(Math.round(toMAD(it.sell,it.sellCur))):'';
   var sold=it?!!it.sold:false;
+  var st=sold?'sold':((it&&it.sent)?'sent':'stock');
   var toldCur=it?(it.toldCur||'MAD'):'MAD';
   var toldM=it&&num(it.told)>0?String(Math.round(toMAD(it.told,toldCur))):'';
   var toldE=it&&num(it.told)>0?comma(toEUR(it.told,toldCur),2):'';
@@ -600,9 +573,15 @@ function openForm(item){
 
   h+='<div class="label">Ingekocht op</div><input class="in" type="date" id="f_bought" value="'+esc(it?(it.boughtAt||today()):today())+'">';
 
-  h+='<div class="label">Status</div><div class="seg" id="f_seg">'
-   + '<button data-sold="0" class="'+(!sold?'on-stock':'')+'">Op voorraad</button>'
-   + '<button data-sold="1" class="'+(sold?'on-sold':'')+'">Verkocht</button></div>';
+  h+='<div class="label">Status</div><div class="seg three" id="f_seg">'
+   + '<button data-st="stock" class="'+(st==='stock'?'on-stock':'')+'">Op voorraad</button>'
+   + '<button data-st="sent" class="'+(st==='sent'?'on-sent':'')+'">Verstuurd</button>'
+   + '<button data-st="sold" class="'+(st==='sold'?'on-sold':'')+'">Verkocht</button></div>';
+
+  h+='<div id="sentBox" '+(st==='sent'?'':'hidden')+'><div class="soldbox">'
+   + '<div class="label">Verstuurd op</div><input class="in" type="date" id="f_sent" value="'+esc(it?(it.sentAt||today()):today())+'">'
+   + '<div class="hint">De telefoon is onderweg naar Marokko. Hij staat nog niet verkocht, dus je geld staat er nog in.</div>'
+   + '</div></div>';
 
   h+='<div id="soldBox" '+(sold?'':'hidden')+'><div class="soldbox">'
    + '<div class="label">Verkoopprijs</div><div class="pair">'
@@ -624,7 +603,7 @@ function openForm(item){
   var el=document.getElementById('sheet');
   el.innerHTML=h;
   el.dataset.id=it?it.id:'';
-  el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.sold=sold?'1':'0'; el.dataset.toldCur=toldCur;
+  el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.st=st; el.dataset.sentAt=it?(it.sentAt||''):''; el.dataset.toldCur=toldCur;
   el.dataset.costTCur=it?(it.costTCur||'EUR'):'EUR'; el.dataset.costPCur=it?(it.costPCur||'EUR'):'EUR';
   el.dataset.payments=JSON.stringify(it&&it.payments?it.payments:[]);
   el.dataset.created=it?(it.createdAt||''):'';
@@ -685,14 +664,22 @@ function openForm(item){
 
   document.getElementById('f_seg').addEventListener('click',function(e){
     var b=e.target.closest('button'); if(!b)return;
-    var s=b.dataset.sold==='1';
-    el.dataset.sold=s?'1':'0';
-    var btns=this.querySelectorAll('button');
-    btns[0].className=s?'':'on-stock';
-    btns[1].className=s?'on-sold':'';
-    document.getElementById('soldBox').hidden=!s;
+    setStatusSeg(b.dataset.st);
     profit();
   });
+}
+
+/* zet de drie statusknoppen en de bijbehorende vakken goed */
+function setStatusSeg(s){
+  var el=document.getElementById('sheet'), seg=document.getElementById('f_seg');
+  if(!el||!seg)return;
+  el.dataset.st=s;
+  var btns=seg.querySelectorAll('button');
+  btns[0].className=s==='stock'?'on-stock':'';
+  btns[1].className=s==='sent'?'on-sent':'';
+  btns[2].className=s==='sold'?'on-sold':'';
+  document.getElementById('sentBox').hidden=s!=='sent';
+  document.getElementById('soldBox').hidden=s!=='sold';
 }
 
 function savePhone(){
@@ -702,7 +689,8 @@ function savePhone(){
   var mSel=document.getElementById('f_model');
   var finalBrand=brand==='Anders'?((bFree&&bFree.value.trim())||'Anders'):brand;
   var finalModel=brand==='Anders'?(mFree?mFree.value.trim():''):(mSel?mSel.value:'');
-  var sold=el.dataset.sold==='1';
+  var st=el.dataset.st||'stock';
+  var sold=st==='sold', sent=st==='sent';
   var buyCur=el.dataset.buyCur||'EUR', sellCur=el.dataset.sellCur||'MAD';
   var buy=buyCur==='MAD'?num(document.getElementById('f_buyM').value):num(document.getElementById('f_buyE').value);
   var sell=0;
@@ -736,6 +724,8 @@ function savePhone(){
     customer:sold?(document.getElementById('f_customer').value||'').trim():'',
     payments:payments,
     boughtAt:document.getElementById('f_bought').value,
+    sent:sent,
+    sentAt:(sent||el.dataset.sentAt)?((document.getElementById('f_sent')||{}).value||''):'',
     soldAt:sold?document.getElementById('f_sold').value:'',
     note:(document.getElementById('f_note').value||'').trim()
   };
@@ -761,7 +751,7 @@ function openSettings(){
    + '<div class="note">Bedragen blijven staan in de valuta waarin je ze invulde. Alleen de omrekening volgt deze koers.</div>'
    + '<div class="divider"></div>'
    + '<div class="label">Jouw boek</div>'
-   + '<div class="mono dim" style="font-size:14px">'+S.items.length+' toestellen &middot; '+t.verkocht+' verkocht &middot; winst '+eur(t.winst)+'</div>'
+   + '<div class="mono dim" style="font-size:14px">'+S.items.length+' toestellen &middot; '+t.verkocht+' verkocht &middot; winst '+eur(t.mijn)+'</div>'
    + (function(){
        if(!S.lastBackup)return '<div class="hint" style="color:var(--saffron);margin-top:10px">Je hebt nog nooit een back-up gemaakt.</div>';
        var dagen=Math.floor((new Date()-new Date(S.lastBackup))/86400000);
@@ -775,29 +765,7 @@ function openSettings(){
    + '<div id="backupBox"></div>'
    + '<div class="note">Je gegevens staan in deze app op dit toestel. Maak af en toe een back-up, dan kun je alles terugzetten of naar je andere telefoon overzetten.</div>'
    + '<div class="label">Back-up terugzetten</div>'
-   + '<button class="outline" data-act="pickfile">Back-upbestand kiezen</button>'
-   + '<input type="file" id="s_file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'
-   + '<div class="hint">Zie je je bestand niet? Tik onderin op <b>Zoek</b> en typ <b>telefoonboek</b> in het zoekvak. '
-   + 'Of kijk bij <b>Op mijn iPhone</b> &rarr; <b>Downloads</b>.</div>'
-   + (function(){
-       var s=S.snaps||[];
-       if(!s.length) return '<div class="label">Herstelpunten in de app</div>'
-         + '<div class="hint" style="margin-top:0">Zodra je iets wijzigt bewaart de app hier zelf de vorige stand. Dan kun je terug zonder bestanden.</div>';
-       var u='<div class="label">Herstelpunten in de app</div>'
-         + '<div class="hint" style="margin-top:0">De app bewaart elke dag de stand van daarvoor. Eén tik en je bent terug.</div>';
-       s.forEach(function(p,i){
-         u+='<div class="r" style="display:flex;align-items:center;justify-content:space-between;gap:10px;'
-          + 'border-bottom:1px solid var(--line);padding:11px 0">'
-          + '<div><div class="nm" style="font-size:14px">'+dateNL(new Date(p.at).toISOString().slice(0,10))+'</div>'
-          + '<div class="ds mono" style="font-size:12px;color:var(--dim)">'+p.n+' toestellen</div></div>'
-          + '<button class="text-btn" data-act="snapback" data-i="'+i+'" style="color:var(--azure);font-weight:600;font-size:13px;padding:8px 4px">Terugzetten</button>'
-          + '</div>';
-       });
-       u+='<div class="hint">Deze punten staan op dit toestel. Raak je je telefoon kwijt, dan helpt alleen een back-upbestand.</div>';
-       return u;
-     })()
-   + '<div class="hint" style="margin-top:14px">Of plak de tekst van je back-up:</div>'
-   + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px;margin-top:6px"></textarea>'
+   + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px"></textarea>'
    + '<button class="outline quiet" data-act="import">Terugzetten (overschrijft dit boek)</button>'
    + '<div class="note" id="importMsg"></div>'
    + '<div class="divider"></div>'
@@ -808,35 +776,19 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 10 &middot; augustus 2026</div>'
+   + '<div class="ver">Telefoonboek versie 9 &middot; september 2026</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
     var n=num(this.value); if(n>0){S.rate=n;save()}
   });
-  document.getElementById('s_file').addEventListener('change',function(){
-    var f=this.files&&this.files[0];
-    if(!f)return;
-    var msg=document.getElementById('importMsg');
-    if(msg)msg.textContent='Bestand wordt gelezen…';
-    var lezer=new FileReader();
-    lezer.onload=function(){
-      zetTerug(String(lezer.result||''),
-        'Dit bestand is geen geldige back-up. Kies het bestand dat begint met "telefoonboek".');
-    };
-    lezer.onerror=function(){
-      var m=document.getElementById('importMsg');
-      if(m)m.textContent='Het bestand kon niet gelezen worden. Probeer het opnieuw.';
-    };
-    lezer.readAsText(f);
-  });
 }
 
 /* ── doorstuurbericht, Arabisch of Nederlands ── */
 var TXT={
-  ar:{titel:'دفتر الهواتف', verkocht:'تم البيع', voorraad:'في المخزون',
+  ar:{onderweg:'\u0641\u064A \u0627\u0644\u0637\u0631\u064A\u0642', titel:'دفتر الهواتف', verkocht:'تم البيع', voorraad:'في المخزون',
       inkoop:'الشراء', verkoop:'البيع', winst:'الربح', samen:'الربح المشترك', dh:'درهم'},
-  nl:{titel:'Telefoonboek', verkocht:'VERKOCHT', voorraad:'NOG OP VOORRAAD',
+  nl:{titel:'Telefoonboek', verkocht:'VERKOCHT', voorraad:'NOG OP VOORRAAD', onderweg:'ONDERWEG NAAR MAROKKO',
       inkoop:'inkoop', verkoop:'verkoop', winst:'winst', samen:'WINST SAMEN', dh:'DH'}
 };
 function bedrag(eurBedrag,lang){
@@ -847,7 +799,8 @@ function shareText(lang){
   var d=new Date(), dd=('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();
   var L=[T.titel+' — '+dd];
   var verkocht=S.items.filter(function(x){return x.sold});
-  var voorraad=S.items.filter(function(x){return !x.sold});
+  var onderweg=S.items.filter(function(x){return !x.sold&&x.sent});
+  var voorraad=S.items.filter(function(x){return !x.sold&&!x.sent});
   function naam(it){return it.brand+' '+it.model+(it.storage?' '+it.storage:'')}
   if(verkocht.length){
     L.push('',T.verkocht);
@@ -856,6 +809,10 @@ function shareText(lang){
       L.push('- '+naam(it));
       L.push('  '+T.inkoop+' '+bedrag(dr,lang)+' | '+T.verkoop+' '+bedrag(u,lang)+' | '+T.winst+' '+bedrag(u-dr,lang));
     });
+  }
+  if(onderweg.length){
+    L.push('',T.onderweg);
+    onderweg.forEach(function(it){L.push('- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorEUR(it),lang))});
   }
   if(voorraad.length){
     L.push('',T.voorraad);
@@ -1045,28 +1002,6 @@ function openCheck(){
   document.getElementById('c_brand').addEventListener('change',function(){
     S.checkBrand=this.value; save(); openCheck();
   });
-}
-
-/* ── back-up terugzetten, uit een bestand of uit geplakte tekst ── */
-function zetTerug(tekst,foutmelding){
-  var d;
-  try{
-    d=JSON.parse(tekst);
-    if(!d||!Array.isArray(d.items))throw new Error('bad');
-  }catch(e){
-    var m=document.getElementById('importMsg');
-    if(m)m.textContent=foutmelding;
-    return false;
-  }
-  snapshotBij(true);   /* zodat je een verkeerde terugzetting kunt terugdraaien */
-  S.items=d.items;
-  if(d.rate)S.rate=d.rate;
-  if(d.checks)S.checks=d.checks;
-  if(d.lang)ui.lang=d.lang;
-  save(); render(); openSettings();
-  var m2=document.getElementById('importMsg');
-  if(m2)m2.textContent=d.items.length+' toestellen teruggezet. Kijk of je winst en je klanten er weer staan.';
-  return true;
 }
 
 /* ── bonnetje voor de klant ── */
@@ -1270,15 +1205,14 @@ document.addEventListener('click',function(e){
   if(act==='tipoff'){ui.tipOff=true;try{localStorage.setItem(KEY+'_tip','1')}catch(err){}render();return}
 
   if(act==='toggle'){
-    if(!it.sold&&!num(it.sell)){openForm(it);
-      var el=document.getElementById('sheet');
-      el.dataset.sold='1';
-      var seg=document.getElementById('f_seg').querySelectorAll('button');
-      seg[0].className=''; seg[1].className='on-sold';
-      document.getElementById('soldBox').hidden=false;
-      return;
+    /* op voorraad -> verstuurd -> verkocht, en met nog een tik weer terug */
+    if(!it.sold&&!it.sent){it.sent=true; it.sentAt=today(); save();render();return}
+    if(!it.sold){
+      if(!num(it.sell)){openForm(it); setStatusSeg('sold'); return}
+      it.sold=true; it.soldAt=today(); it.sent=false;
+      save();render();return;
     }
-    it.sold=!it.sold; it.soldAt=it.sold?today():'';
+    it.sold=false; it.soldAt=''; it.sent=!!it.sentAt;
     save();render();return;
   }
   if(act==='pay'){ui.payFor=id;render();return}
@@ -1305,15 +1239,15 @@ document.addEventListener('click',function(e){
     } else b.textContent='Kopiëren lukt niet — gebruik het bestand';
     return;
   }
-  if(act==='pickfile'){document.getElementById('s_file').click();return}
-  if(act==='snapback'){
-    var p=(S.snaps||[])[+b.dataset.i];
-    if(p) zetTerug(p.data,'Dit herstelpunt is niet leesbaar.');
-    return;
-  }
   if(act==='import'){
-    zetTerug(document.getElementById('s_import').value,
-      'Deze tekst is geen geldige back-up. Kopieer hem nog een keer helemaal.');
+    var msg=document.getElementById('importMsg');
+    try{
+      var d=JSON.parse(document.getElementById('s_import').value);
+      if(!d||!Array.isArray(d.items))throw new Error('bad');
+      S.items=d.items; if(d.rate)S.rate=d.rate;
+      save();openSettings();render();
+      document.getElementById('importMsg').textContent=d.items.length+' toestellen teruggezet.';
+    }catch(err){msg.textContent='Deze tekst is geen geldige back-up. Kopieer hem nog een keer helemaal.'}
     return;
   }
 });
