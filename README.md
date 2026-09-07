@@ -11,7 +11,8 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 - Inkoop en verkoop per toestel, in euro's en dirham, met een instelbare koers
 - Een tweede, doorgegeven inkoopprijs, zodat je eigen marge privé blijft
-- Kosten voor transport en vervangen onderdelen
+- Kosten voor transport, en vervangen onderdelen als lijst: per onderdeel
+  een naam en een bedrag, met een plusje voor de volgende
 - Vijf standen: op voorraad, verstuurd (onderweg naar Marokko), bij klant
   (verkocht maar niet afbetaald), betaald, afgeschreven
 - Per toestel waar je minimaal voor moet verkopen: om quitte te staan, en
@@ -29,7 +30,7 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Waarschuwing als je een IMEI invoert die al in je boek staat
 - Verkochte toestellen houden de koers van hun verkoopdag, zodat oude
   winst niet verschuift als je de koers aanpast
-- Betalingen per klant, met wat er nog open staat
+- Betalingen per klant, in euro of dirham, met wat er nog open staat
 - Accupercentage en IMEI
 - Controlelijst met testcodes per merk, voor bij de inkoop
 - Bonnetje voor de klant en een overzicht voor je collega, in het Arabisch
@@ -47,8 +48,8 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 Verhoog het nummer op twee plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `var VERSIE='19'` bovenaan het script
-2. `sw.js` — `telefoonboek-v19`
+1. `index.html` — `var VERSIE='20'` bovenaan het script
+2. `sw.js` — `telefoonboek-v20`
 
 De kop en de regel onderaan de instellingen halen het nummer daar zelf op.
 

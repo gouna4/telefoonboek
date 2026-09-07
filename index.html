@@ -240,6 +240,13 @@ button.dl{width:100%;text-align:left}
 
 /* ── kosten, codes, vinkjes ── */
 .costrow{display:flex;align-items:center;gap:8px;margin-top:8px}
+.partrow{background:var(--night);border:1px solid var(--line);border-radius:14px;padding:11px;margin-top:9px}
+.partrow .op{display:flex;align-items:center;gap:8px;margin-top:8px}
+.partrow .op input{flex:1;min-width:0}
+.partrow .weg{flex:0 0 auto;width:38px;height:38px;border:1px solid var(--line);border-radius:10px;
+  color:var(--dim);font-size:18px;line-height:1}
+.partadd{width:100%;margin-top:10px;border:1px dashed var(--line);color:var(--sand);border-radius:12px;
+  padding:12px;font-weight:600;font-size:14px}
 .clab{flex:0 0 92px;font-size:13px;color:var(--dim)}
 .costrow input{flex:1;min-width:0}
 .cur{display:flex;gap:3px;background:var(--night);border:1px solid var(--line);border-radius:10px;padding:3px}
@@ -317,10 +324,10 @@ var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='19', VERSIEDATUM='september 2026';
+var VERSIE='20', VERSIEDATUM='september 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[]};
-var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:''};
+var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:''};
 
 function load(){
   try{
@@ -852,7 +859,34 @@ function zendingDeelEUR(it){
   return zendingKostEUR(z,it)/n;
 }
 
-function kostenEUR(it){return toEURk(it,it.costT,it.costTCur||'EUR')+toEURk(it,it.costP,it.costPCur||'EUR')+zendingDeelEUR(it)}
+/* Vervangen onderdelen staan in een lijst: elk met een naam en een bedrag.
+   Toestellen van voor v20 hebben nog een enkel bedrag in costP; die tellen we
+   mee zolang er geen lijst is, zodat oude cijfers niet veranderen. */
+function onderdelenEUR(it){
+  var uit=0;
+  if(it&&it.parts&&it.parts.length){
+    it.parts.forEach(function(o){uit+=toEURk(it,o.bedrag,o.cur||'EUR')});
+    return uit;
+  }
+  return toEURk(it,it.costP,it.costPCur||'EUR');
+}
+/* de losse regels voor de kaart: 'accu EUR 25,00 . scherm EUR 60,00' */
+function onderdelenDeel(it){
+  var uit=[];
+  if(it&&it.parts&&it.parts.length){
+    it.parts.forEach(function(o){
+      var b=toEURk(it,o.bedrag,o.cur||'EUR');
+      if(b>0.005||String(o.wat||'').trim())
+        uit.push((String(o.wat||'').trim()?esc(o.wat):'onderdeel')+' '+eur(b));
+    });
+    return uit;
+  }
+  if(num(it.costP)>0)
+    uit.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(toEURk(it,it.costP,it.costPCur||'EUR')));
+  return uit;
+}
+
+function kostenEUR(it){return toEURk(it,it.costT,it.costTCur||'EUR')+onderdelenEUR(it)+zendingDeelEUR(it)}
 
 /* prijs die de collega kent; niet ingevuld = jouw echte inkoop */
 function doorEUR(it){var v=num(it.told);return v>0?toEURk(it,it.told,it.toldCur||'MAD'):toEURk(it,it.buy,it.buyCur)}
@@ -1160,7 +1194,7 @@ function card(it){
   if(kost>0.005){
     var deel=[];
     if(num(it.costT)>0)deel.push('transport '+eur(toEURk(it,it.costT,it.costTCur||'EUR')));
-    if(num(it.costP)>0)deel.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(toEURk(it,it.costP,it.costPCur||'EUR')));
+    onderdelenDeel(it).forEach(function(x){deel.push(x)});
     var zdeel=zendingDeelEUR(it);
     if(zdeel>0.005)deel.push('zending '+eur(zdeel));
     h+='<div class="row"><span class="dim">Kosten'+lock()+'</span><span class="r">'+pv(eur(kost)+' <span class="dim">&middot; '+mad(kost*kr(it))+'</span>')+'</span></div>';
@@ -1218,8 +1252,11 @@ function card(it){
       h+='</div>';
     }
     if(ui.payFor===it.id){
-      h+='<div class="mini"><input id="payinput" inputmode="decimal" placeholder="bedrag in '+(it.sellCur==='MAD'?'DH':'\u20ac')+'">'
-       + '<button class="ok" data-act="addpay" data-id="'+it.id+'">Zet erbij</button>'
+      var pc=ui.payCur||it.sellCur||'MAD';
+      h+='<div class="mini"><input id="payinput" inputmode="decimal" placeholder="bedrag" value="'+esc(ui.payVal||'')+'">'
+       + '<span class="cur"><button data-act="paycur" data-v="EUR" class="'+(pc==='EUR'?'on':'')+'">&euro;</button>'
+       + '<button data-act="paycur" data-v="MAD" class="'+(pc==='MAD'?'on':'')+'">DH</button></span></div>'
+       + '<div class="mini"><button class="ok" style="flex:1" data-act="addpay" data-id="'+it.id+'">Zet erbij</button>'
        + '<button class="no" data-act="cancelpay">&times;</button></div>';
     } else if(!klaar){
       h+='<button class="ghost" data-act="pay" data-id="'+it.id+'">Betaling toevoegen</button>';
@@ -1294,10 +1331,11 @@ function openForm(item){
 
   h+='<div class="label">Kosten'+lock()+'</div>'
    + costRow('Transport','f_costT',it&&num(it.costT)>0?comma(num(it.costT),2):'',it?(it.costTCur||'EUR'):'EUR','costT')
-   + costRow('Onderdelen','f_costP',it&&num(it.costP)>0?comma(num(it.costP),2):'',it?(it.costPCur||'EUR'):'EUR','costP')
-   + '<input class="in" id="f_costWhat" style="margin-top:8px" placeholder="wat is vervangen? bv. scherm, accu" value="'+esc(it?(it.costWhat||''):'')+'">'
-   + '<div class="hint">Verzending, reis, een nieuw scherm of accu. Dit gaat van jouw winst af en blijft uit de winst samen. '
-   + 'Wil je dat je collega meebetaalt, tel het dan op bij de doorgegeven inkoop.</div>'
+   + '<div class="label" style="margin-top:18px">Vervangen onderdelen</div>'
+   + '<div id="partList"></div>'
+   + '<button class="partadd" data-act="partadd">+ onderdeel toevoegen</button>'
+   + '<div class="hint">Transport, een nieuw scherm of een accu: dit gaat van jouw winst af en blijft uit de '
+   + 'winst samen. Wil je dat je collega meebetaalt, tel het dan op bij de doorgegeven inkoop.</div>'
    + (function(){
        var z=(it&&it.zid)?zendingById(it.zid):null;
        if(!z&&!(it&&num(it.costZ)>0))return '';
@@ -1340,7 +1378,8 @@ function openForm(item){
    + '<div class="label">Klant</div><input class="in" id="f_customer" placeholder="naam" value="'+esc(it?it.customer:'')+'">'
    + '<div class="label">Nummer klant</div><input class="in mono" id="f_phone" inputmode="tel" placeholder="06… of 2126…" value="'+esc(it?(it.phone||''):'')+'">'
    + '<div class="hint">Voor het bonnetje via WhatsApp. Een 06-nummer reken ik als Marokkaans (+212).</div>'
-   + '<div class="label">Nu al betaald</div><input class="in mono" id="f_firstpay" inputmode="decimal" placeholder="0">'
+   + '<div class="label">Nu al betaald</div>'
+   + costRow('Bedrag','f_firstpay','',sellCur,'firstpay')
    + '<div class="hint">Latere betalingen zet je er op de kaart bij.</div>'
    + '<div class="label">Verkocht op</div><input class="in" type="date" id="f_sold" value="'+esc(it?(it.soldAt||today()):today())+'">'
    + '<div class="label">Koers bij verkoop</div><input class="in mono" id="f_rate" inputmode="decimal" value="'+esc(comma(num(it&&it.rate)>0?num(it.rate):S.rate,2))+'">'
@@ -1353,6 +1392,16 @@ function openForm(item){
   h+='</div><div class="sbar"><div class="sbar-in"><button class="cancel" data-act="close">Annuleren</button>'
    + '<button class="save" data-act="savephone">Opslaan</button></div></div></div>';
 
+  /* de onderdelen van dit toestel; een oud enkel bedrag wordt de eerste regel */
+  formParts=[];
+  if(it&&it.parts&&it.parts.length){
+    it.parts.forEach(function(o){
+      formParts.push({id:o.id||uid(),wat:o.wat||'',bedrag:num(o.bedrag),cur:o.cur||'EUR'});
+    });
+  } else if(it&&num(it.costP)>0){
+    formParts.push({id:uid(),wat:it.costWhat||'',bedrag:num(it.costP),cur:it.costPCur||'EUR'});
+  }
+
   var el=document.getElementById('sheet');
   el.innerHTML=h;
   el.dataset.id=it?it.id:'';
@@ -1360,7 +1409,7 @@ function openForm(item){
   el.dataset.rate=it&&num(it.rate)>0?String(num(it.rate)):'';
   el.dataset.zid=it?(it.zid||''):''; el.dataset.costZ=it&&num(it.costZ)>0?String(num(it.costZ)):'';
   el.dataset.toldCur=toldCur;
-  el.dataset.costTCur=it?(it.costTCur||'EUR'):'EUR'; el.dataset.costPCur=it?(it.costPCur||'EUR'):'EUR';
+  el.dataset.costTCur=it?(it.costTCur||'EUR'):'EUR'; el.dataset.firstpayCur=sellCur;
   el.dataset.payments=JSON.stringify(it&&it.payments?it.payments:[]);
   el.dataset.created=it?(it.createdAt||''):'';
 
@@ -1429,7 +1478,7 @@ function openForm(item){
   pair('f_selM','f_selE','sellCur',true);
   pair('f_toldM','f_toldE','toldCur',true);
   pair('f_toldE','f_toldM','toldCur',false);
-  ['f_costT','f_costP','f_rate'].forEach(function(id){
+  ['f_costT','f_rate'].forEach(function(id){
     var f=document.getElementById(id);
     if(f)f.addEventListener('input',profit);
   });
@@ -1441,10 +1490,9 @@ function openForm(item){
     var dE=tE>0?tE:bE;
     var sE=num((document.getElementById('f_selE')||{}).value);
     var kEUR=0;
-    ['costT','costP'].forEach(function(k){
-      var f=document.getElementById(k==='costT'?'f_costT':'f_costP');
-      if(f)kEUR+=(el.dataset[k+'Cur']==='MAD'?num(f.value)/(koersNu()||1):num(f.value));
-    });
+    var ft=document.getElementById('f_costT');
+    if(ft)kEUR+=(el.dataset.costTCur==='MAD'?num(ft.value)/(koersNu()||1):num(ft.value));
+    kEUR+=partsEUR(koersNu());
     var m=sE-bE-kEUR, o=sE-dE, kn=koersNu();
     p.innerHTML='<span style="color:'+(m>=0?'var(--mint)':'var(--clay)')+'">mijn winst '+eur(m)+' &middot; '+mad(m*kn)+'</span>'
       + '<br><span style="color:var(--azure)">onze winst '+mad(o*kn)+' &middot; '+eur(o)+'</span>';
@@ -1459,13 +1507,60 @@ function openForm(item){
       fl.innerHTML=u;
     }
   }
+  window.hertelKosten=profit;   /* de onderdelenlijst laat de winst hiermee bijwerken */
   profit();
+
+  tekenParts();
 
   document.getElementById('f_seg').addEventListener('click',function(e){
     var b=e.target.closest('button'); if(!b)return;
     setStatusSeg(b.dataset.st);
     profit();
   });
+}
+
+/* de lijst met vervangen onderdelen in het formulier */
+var formParts=[];
+
+function tekenParts(){
+  var box=document.getElementById('partList');
+  if(!box)return;
+  if(!formParts.length){
+    box.innerHTML='<div class="hint" style="margin-top:6px">Niets vervangen. Tik op het plusje als je een '
+     + 'accu, scherm of ander onderdeel hebt betaald.</div>';
+    return;
+  }
+  var h='';
+  formParts.forEach(function(o,i){
+    h+='<div class="partrow">'
+     + '<input class="in" data-part="wat" data-i="'+i+'" placeholder="wat is vervangen? bv. accu" value="'+esc(o.wat||'')+'">'
+     + '<div class="op">'
+     + '<input class="in mono" data-part="bedrag" data-i="'+i+'" inputmode="decimal" placeholder="0,00" value="'+esc(num(o.bedrag)>0?comma(num(o.bedrag),2):'')+'">'
+     + '<span class="cur"><button data-act="partcur" data-i="'+i+'" data-v="EUR" class="'+(o.cur!=='MAD'?'on':'')+'">&euro;</button>'
+     + '<button data-act="partcur" data-i="'+i+'" data-v="MAD" class="'+(o.cur==='MAD'?'on':'')+'">DH</button></span>'
+     + '<button class="weg" data-act="partdel" data-i="'+i+'" aria-label="Weghalen">&times;</button>'
+     + '</div></div>';
+  });
+  box.innerHTML=h;
+  /* typen slaat op in de lijst, zonder opnieuw te tekenen: dan blijft je cursor staan */
+  [].forEach.call(box.querySelectorAll('[data-part]'),function(f){
+    f.addEventListener('input',function(){
+      var i=+f.dataset.i;
+      if(!formParts[i])return;
+      if(f.dataset.part==='wat')formParts[i].wat=f.value;
+      else formParts[i].bedrag=num(f.value);
+      if(typeof window.hertelKosten==='function')window.hertelKosten();
+    });
+  });
+}
+
+/* wat de onderdelen in het formulier nu samen kosten, in euro */
+function partsEUR(koers){
+  var uit=0;
+  formParts.forEach(function(o){
+    uit+=(o.cur==='MAD')?(num(o.bedrag)/(koers||1)):num(o.bedrag);
+  });
+  return uit;
 }
 
 /* zet de drie statusknoppen en de bijbehorende vakken goed */
@@ -1503,20 +1598,29 @@ function savePhone(){
   try{payments=JSON.parse(el.dataset.payments||'[]')}catch(e){}
   if(sold){
     var fp=document.getElementById('f_firstpay');
-    if(fp&&num(fp.value)>0)payments=payments.concat([{id:uid(),date:today(),amount:num(fp.value),cur:sellCur}]);
+    if(fp&&num(fp.value)>0)payments=payments.concat([{id:uid(),date:today(),amount:num(fp.value),
+      cur:(el.dataset.firstpayCur==='MAD'||el.dataset.firstpayCur==='EUR')?el.dataset.firstpayCur:sellCur}]);
   } else payments=[];
 
   var toldCur=el.dataset.toldCur||'MAD';
   var tM=document.getElementById('f_toldM'), tE=document.getElementById('f_toldE');
   var told=toldCur==='MAD'?num(tM?tM.value:0):num(tE?tE.value:0);
 
-  var cT=document.getElementById('f_costT'), cP=document.getElementById('f_costP');
+  var cT=document.getElementById('f_costT');
 
   var base={
     brand:finalBrand, model:finalModel, told:told, toldCur:toldCur,
     costT:num(cT?cT.value:0), costTCur:el.dataset.costTCur||'EUR',
-    costP:num(cP?cP.value:0), costPCur:el.dataset.costPCur||'EUR',
-    costWhat:(function(e){return e?e.value.trim():''})(document.getElementById('f_costWhat')),
+    parts:(function(){
+      var uit=[];
+      formParts.forEach(function(o){
+        var wat=String(o.wat||'').trim(), bedrag=num(o.bedrag);
+        if(!wat&&!(bedrag>0))return;          /* lege regels vallen weg */
+        uit.push({id:o.id||uid(),wat:wat,bedrag:bedrag,cur:o.cur==='MAD'?'MAD':'EUR'});
+      });
+      return uit;
+    })(),
+    costP:0, costPCur:'EUR', costWhat:'',     /* het oude enkele bedrag is nu een regel in de lijst */
     battery:num((document.getElementById('f_battery')||{}).value),
     imei:((document.getElementById('f_imei')||{}).value||'').trim(),
     phone:(((document.getElementById('f_phone')||{}).value||'').trim()),
@@ -1738,11 +1842,11 @@ function openDrill(k){
       h+='<div class="label">'+soort[1]+'</div>';
       deel.forEach(function(it){
         var ink=toEURk(it,it.buy,it.buyCur);
-        var kt=toEURk(it,it.costT,it.costTCur||'EUR'), kp=toEURk(it,it.costP,it.costPCur||'EUR');
+        var kt=toEURk(it,it.costT,it.costTCur||'EUR'), kp=onderdelenEUR(it);
         var kz=zendingDeelEUR(it);
         var tot=ink+kt+kp+kz, d=['inkoop '+eur(ink)];
         if(kt>0.005)d.push('transport '+eur(kt));
-        if(kp>0.005)d.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(kp));
+        onderdelenDeel(it).forEach(function(x){d.push(x)});
         if(kz>0.005)d.push('zending '+eur(kz));
         var dg=dagenTekst(it);
         h+=regel(naam(it), pv(d.join(' &middot; '))+(dg?'<br>'+dg:''), pv(eur(tot)), pv(mad(tot*kr(it))));
@@ -2346,6 +2450,26 @@ document.addEventListener('click',function(e){
   if(act==='edit'){openForm(it);return}
   if(act==='close'){closeSheet();render();return}
   if(act==='savephone'){savePhone();return}
+  if(act==='partadd'){
+    formParts.push({id:uid(),wat:'',bedrag:0,cur:'EUR'});
+    tekenParts();
+    if(typeof window.hertelKosten==='function')window.hertelKosten();
+    var rijen=document.querySelectorAll('#partList .partrow input[data-part="wat"]');
+    if(rijen.length)rijen[rijen.length-1].focus();
+    return;
+  }
+  if(act==='partdel'){
+    formParts.splice(+b.dataset.i,1);
+    tekenParts();
+    if(typeof window.hertelKosten==='function')window.hertelKosten();
+    return;
+  }
+  if(act==='partcur'){
+    var pi=+b.dataset.i;
+    if(formParts[pi]){formParts[pi].cur=b.dataset.v;tekenParts();
+      if(typeof window.hertelKosten==='function')window.hertelKosten();}
+    return;
+  }
   if(act==='settings'){openSettings();return}
   if(act==='drill'){openDrill(b.dataset.k);return}
   if(act==='zendingen'){ui.zdel='';openZendingen();return}
@@ -2509,12 +2633,21 @@ document.addEventListener('click',function(e){
     it.sold=false; it.soldAt=''; it.sent=!!it.sentAt;
     save();render();return;
   }
-  if(act==='pay'){ui.payFor=id;render();return}
-  if(act==='cancelpay'){ui.payFor=null;render();return}
+  if(act==='pay'){ui.payFor=id;ui.payCur=(it&&it.sellCur)||'MAD';ui.payVal='';render();return}
+  if(act==='cancelpay'){ui.payFor=null;ui.payVal='';render();return}
+  if(act==='paycur'){
+    /* wat je al getypt hebt bewaren, anders ben je het kwijt bij het omschakelen */
+    var pin=document.getElementById('payinput');
+    ui.payVal=pin?pin.value:'';
+    ui.payCur=b.dataset.v;
+    render();
+    return;
+  }
   if(act==='addpay'){
     var v=num(document.getElementById('payinput').value);
-    if(v>0){it.payments=(it.payments||[]).concat([{id:uid(),date:today(),amount:v,cur:it.sellCur||'MAD'}]);save()}
-    ui.payFor=null;render();return;
+    var vc=ui.payCur||it.sellCur||'MAD';
+    if(v>0){it.payments=(it.payments||[]).concat([{id:uid(),date:today(),amount:v,cur:vc}]);save()}
+    ui.payFor=null;ui.payVal='';render();return;
   }
   if(act==='delpay'){
     var pid=b.dataset.pid;
