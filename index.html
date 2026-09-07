@@ -198,6 +198,11 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .warn .go{width:100%;margin-top:12px;background:var(--azure);color:#1B1108;border-radius:12px;
   padding:12px;font-weight:700;font-size:14px}
 .metabtn{color:var(--azure);font-weight:600;font-size:12px;padding:0;text-align:right}
+.sortrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px;padding:0 3px}
+.sortrow .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim);margin-right:2px}
+.sortbtn{color:var(--dim);font-size:12px;font-weight:600;padding:6px 11px;
+  border:1px solid var(--line);border-radius:999px;white-space:nowrap}
+.sortbtn.on{color:var(--night);background:var(--sand);border-color:var(--sand)}
 
 /* ── kosten, codes, vinkjes ── */
 .costrow{display:flex;align-items:center;gap:8px;margin-top:8px}
@@ -274,7 +279,7 @@ var CATALOG={
 var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false,snaps:[]};
-var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false};
+var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw'};
 
 function load(){
   try{
@@ -477,11 +482,11 @@ function render(){
       if(!q)return true;
       return [it.brand,it.model,it.storage,it.customer,it.note,it.imei].join(' ').toLowerCase().indexOf(q)>-1;
     })
-    .sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''))});
+    .sort(sorteer);
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v13</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v14</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -523,6 +528,7 @@ function render(){
    + '</div>';
   if(S.items.length>5) h+='<input class="search" id="q" placeholder="Zoek op model of klant" value="'+esc(ui.q)+'">';
   h+=tabTotaal(list);
+  h+=sortRow(list);
   h+='</div><div class="pad">';
 
   if(!list.length){
@@ -543,6 +549,52 @@ function render(){
 }
 
 /* wat de toestellen in dit tabblad samen betekenen */
+/* de datum waar de ouderdom van een toestel aan hangt: de laatste stap die het
+   heeft gezet, zodat 'langst' overal hetzelfde betekent als op de kaart */
+function ouderdomsDatum(it){
+  if(it.off)return it.offAt||it.boughtAt||'';
+  if(it.sold)return it.soldAt||it.boughtAt||'';
+  if(it.sent)return it.sentAt||it.boughtAt||'';
+  return it.boughtAt||'';
+}
+
+/* hoeveel van jouw geld er in dit toestel nog vastzit */
+function geldVastEUR(it){
+  if(it.off)return 0;
+  if(!it.sold)return kostprijsEUR(it);
+  return restMAD(it)/(kr(it)||1);
+}
+
+/* de drie manieren van sorteren; gelijkspel gaat op nieuwste eerst */
+function sorteer(a,b){
+  if(ui.sort==='lang'){
+    var da=String(ouderdomsDatum(a)||'9999-99-99'), db=String(ouderdomsDatum(b)||'9999-99-99');
+    if(da!==db)return da<db?-1:1;
+  } else if(ui.sort==='geld'){
+    var ga=geldVastEUR(a), gb=geldVastEUR(b);
+    if(Math.abs(ga-gb)>0.005)return gb-ga;
+  }
+  return String(b.createdAt||'').localeCompare(String(a.createdAt||''));
+}
+
+/* de knopjes onder de tabbladen */
+function sortRow(list){
+  if(list.length<3)return '';
+  function knop(k,label){
+    return '<button class="sortbtn'+(ui.sort===k?' on':'')+'" data-act="sort" data-k="'+k+'">'+label+'</button>';
+  }
+  return '<div class="sortrow"><span class="k">sorteer</span>'
+   + knop('nieuw','nieuwste')+knop('lang','langst')+knop('geld','meeste geld')+'</div>';
+}
+
+/* de naam van een maand uit 2026-09 */
+function maandNaam(ym){
+  if(!/^[0-9]{4}-[0-9]{2}$/.test(String(ym)))return 'zonder datum';
+  var d=new Date(Number(String(ym).slice(0,4)),Number(String(ym).slice(5,7))-1,1);
+  if(isNaN(d))return String(ym);
+  return d.toLocaleDateString('nl-NL',{month:'long',year:'numeric'});
+}
+
 /* Je boek staat alleen op deze telefoon. Na een week zonder back-up:
    een strook bovenaan, want in de instellingen kijkt niemand vanzelf. */
 function backupWaarschuwing(){
@@ -1098,6 +1150,24 @@ function openDrill(k){
     if(!verk.length){
       h+='<div class="note">Je hebt nog niets verkocht, dus er is nog geen winst te zien.</div>';
     } else {
+      /* per maand, nieuwste maand bovenaan; alleen als er meer dan een maand is */
+      var mnd={}, mo=[];
+      verk.forEach(function(r){
+        var mk=String(r.it.soldAt||'').slice(0,7)||'onbekend';
+        if(!mnd[mk]){mnd[mk]={n:0,w:0};mo.push(mk)}
+        mnd[mk].n++; mnd[mk].w+=r.w;
+      });
+      if(mo.length>1){
+        mo.sort(function(a,b){return String(b).localeCompare(String(a))});
+        h+='<div class="label">Per maand</div>';
+        mo.forEach(function(mk){
+          var m2=mnd[mk], goed=m2.w>=0;
+          h+='<div class="dl"><div><div class="nm">'+maandNaam(mk)+'</div>'
+           + '<div class="dsub">'+m2.n+' verkocht</div></div>'
+           + '<div class="val"><b style="color:'+(goed?'var(--mint)':'var(--clay)')+'">'
+           + pv((goed?'+ ':'&minus; ')+eur(Math.abs(m2.w)))+'</b></div></div>';
+        });
+      }
       h+='<div class="label">Verkocht &middot; beste bovenaan</div>';
       verk.forEach(function(r){
         var it=r.it, goed=r.w>=0;
@@ -1197,7 +1267,7 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 13 &middot; september 2026</div>'
+   + '<div class="ver">Telefoonboek versie 14 &middot; september 2026</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
@@ -1561,6 +1631,7 @@ document.addEventListener('click',function(e){
   var it=id?S.items.filter(function(x){return x.id===id})[0]:null;
 
   if(act==='tab'){ui.tab=b.dataset.k;ui.payFor=null;render();return}
+  if(act==='sort'){ui.sort=b.dataset.k;render();return}
   if(act==='new'){openForm(null);return}
   if(act==='edit'){openForm(it);return}
   if(act==='close'){closeSheet();render();return}
