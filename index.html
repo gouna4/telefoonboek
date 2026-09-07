@@ -203,6 +203,10 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .sortbtn{color:var(--dim);font-size:12px;font-weight:600;padding:6px 11px;
   border:1px solid var(--line);border-radius:999px;white-space:nowrap}
 .sortbtn.on{color:var(--night);background:var(--sand);border-color:var(--sand)}
+.zbtn{width:100%;margin-top:12px;border:1px solid var(--sky);color:var(--sky);border-radius:12px;
+  padding:11px;font-weight:600;font-size:14px}
+button.dl{width:100%;text-align:left}
+.dl .tik{color:var(--sky);font-weight:700;margin-right:5px}
 
 /* ── kosten, codes, vinkjes ── */
 .costrow{display:flex;align-items:center;gap:8px;margin-top:8px}
@@ -278,8 +282,8 @@ var CATALOG={
 };
 var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
 
-var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false,snaps:[]};
-var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw'};
+var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false,snaps:[],zendingen:[]};
+var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:''};
 
 function load(){
   try{
@@ -295,6 +299,7 @@ function load(){
       if(d.pin)S.pin=d.pin;
       if(d.hide)S.hide=d.hide;
       if(Array.isArray(d.snaps))S.snaps=d.snaps;
+      if(Array.isArray(d.zendingen))S.zendingen=d.zendingen;
     }
     ui.tipOff=localStorage.getItem(KEY+'_tip')==='1';
   }catch(e){}
@@ -313,7 +318,7 @@ function snapshotBij(altijd){
     var dag=today();
     if(!altijd && S.snaps.length && S.snaps[0].dag===dag) return;
     S.snaps.unshift({dag:dag, at:Date.now(), n:d.items.length,
-      data:JSON.stringify({v:1,rate:d.rate,items:d.items})});
+      data:JSON.stringify({v:1,rate:d.rate,items:d.items,zendingen:d.zendingen})});
     S.snaps=S.snaps.slice(0,5);
   }catch(e){}
 }
@@ -323,7 +328,8 @@ function save(){
   for(var poging=0;poging<4;poging++){
     try{
       localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
-        checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,pin:S.pin,hide:S.hide,snaps:S.snaps}));
+        checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,pin:S.pin,hide:S.hide,snaps:S.snaps,
+        zendingen:S.zendingen}));
       ui.msg='';return true;
     }catch(e){
       /* Geen ruimte? Dan gaan de oudste herstelpunten eraf; je eigen boek gaat voor. */
@@ -371,7 +377,37 @@ function standalone(){
 function lock(){return '<svg class="lock" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'}
 
 /* transport en onderdelen: alleen jouw kosten */
-function kostenEUR(it){return toEURk(it,it.costT,it.costTCur||'EUR')+toEURk(it,it.costP,it.costPCur||'EUR')}
+/* ── zendingen ──
+   Een zending is een pakket naar Marokko. De verzendkosten vul je een keer in
+   en ze worden gelijk verdeeld over de toestellen die erin zitten. Zodra een
+   toestel verkocht of afgeschreven is, wordt zijn deel vastgezet, zodat een
+   later toegevoegd toestel de oude winst niet meer verandert. */
+function zendingById(zid){
+  var z=null;
+  (S.zendingen||[]).forEach(function(x){if(x.id===zid)z=x});
+  return z;
+}
+function zendingLeden(zid){
+  return S.items.filter(function(x){return x.zid===zid});
+}
+function zendingKostEUR(z,it){
+  if(!z)return 0;
+  return (z.costCur==='MAD')?(num(z.cost)/(kr(it)||1)):num(z.cost);
+}
+/* het deel van de verzendkosten dat bij dit toestel hoort */
+function zendingDeelEUR(it){
+  if(!it)return 0;
+  var vast=num(it.costZ);
+  if(vast>0)return vast;
+  if(!it.zid)return 0;
+  var z=zendingById(it.zid);
+  if(!z)return 0;
+  var n=zendingLeden(it.zid).length;
+  if(n<1)return 0;
+  return zendingKostEUR(z,it)/n;
+}
+
+function kostenEUR(it){return toEURk(it,it.costT,it.costTCur||'EUR')+toEURk(it,it.costP,it.costPCur||'EUR')+zendingDeelEUR(it)}
 
 /* prijs die de collega kent; niet ingevuld = jouw echte inkoop */
 function doorEUR(it){var v=num(it.told);return v>0?toEURk(it,it.told,it.toldCur||'MAD'):toEURk(it,it.buy,it.buyCur)}
@@ -486,7 +522,7 @@ function render(){
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v14</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v15</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -529,6 +565,9 @@ function render(){
   if(S.items.length>5) h+='<input class="search" id="q" placeholder="Zoek op model of klant" value="'+esc(ui.q)+'">';
   h+=tabTotaal(list);
   h+=sortRow(list);
+  if(ui.tab==='all'||ui.tab==='stock'||ui.tab==='sent')
+    h+='<button class="zbtn" data-act="zendingen">Zendingen'
+     + ((S.zendingen||[]).length?(' &middot; '+(S.zendingen||[]).length):'')+' &rsaquo;</button>';
   h+='</div><div class="pad">';
 
   if(!list.length){
@@ -659,6 +698,8 @@ function card(it){
     var deel=[];
     if(num(it.costT)>0)deel.push('transport '+eur(toEURk(it,it.costT,it.costTCur||'EUR')));
     if(num(it.costP)>0)deel.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(toEURk(it,it.costP,it.costPCur||'EUR')));
+    var zdeel=zendingDeelEUR(it);
+    if(zdeel>0.005)deel.push('zending '+eur(zdeel));
     h+='<div class="row"><span class="dim">Kosten'+lock()+'</span><span class="r">'+pv(eur(kost)+' <span class="dim">&middot; '+mad(kost*kr(it))+'</span>')+'</span></div>';
     if(!S.hide)h+='<div class="row" style="margin-top:3px"><span class="dim" style="font-size:12px">'+deel.join(' &middot; ')+'</span><span></span></div>';
   }
@@ -789,7 +830,16 @@ function openForm(item){
    + costRow('Onderdelen','f_costP',it&&num(it.costP)>0?comma(num(it.costP),2):'',it?(it.costPCur||'EUR'):'EUR','costP')
    + '<input class="in" id="f_costWhat" style="margin-top:8px" placeholder="wat is vervangen? bv. scherm, accu" value="'+esc(it?(it.costWhat||''):'')+'">'
    + '<div class="hint">Verzending, reis, een nieuw scherm of accu. Dit gaat van jouw winst af en blijft uit de winst samen. '
-   + 'Wil je dat je collega meebetaalt, tel het dan op bij de doorgegeven inkoop.</div>';
+   + 'Wil je dat je collega meebetaalt, tel het dan op bij de doorgegeven inkoop.</div>'
+   + (function(){
+       var z=(it&&it.zid)?zendingById(it.zid):null;
+       if(!z&&!(it&&num(it.costZ)>0))return '';
+       var deel=zendingDeelEUR(it);
+       return '<div class="hint" style="color:var(--sky)">Dit toestel zit in de zending van '
+        + (z?(z.date?dateNL(z.date):'zonder datum'):'een verwijderde zending')
+        + (deel>0.005?(' &middot; '+eur(deel)+' aan verzendkosten'):'')
+        + '. Dat regel je bij Zendingen.</div>';
+     })();
 
   h+='<div class="label">Ingekocht op</div><input class="in" type="date" id="f_bought" value="'+esc(it?(it.boughtAt||today()):today())+'">';
 
@@ -839,7 +889,9 @@ function openForm(item){
   el.innerHTML=h;
   el.dataset.id=it?it.id:'';
   el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.st=st; el.dataset.sentAt=it?(it.sentAt||''):''; el.dataset.offAt=it?(it.offAt||''):'';
-  el.dataset.rate=it&&num(it.rate)>0?String(num(it.rate)):''; el.dataset.toldCur=toldCur;
+  el.dataset.rate=it&&num(it.rate)>0?String(num(it.rate)):'';
+  el.dataset.zid=it?(it.zid||''):''; el.dataset.costZ=it&&num(it.costZ)>0?String(num(it.costZ)):'';
+  el.dataset.toldCur=toldCur;
   el.dataset.costTCur=it?(it.costTCur||'EUR'):'EUR'; el.dataset.costPCur=it?(it.costPCur||'EUR'):'EUR';
   el.dataset.payments=JSON.stringify(it&&it.payments?it.payments:[]);
   el.dataset.created=it?(it.createdAt||''):'';
@@ -994,6 +1046,21 @@ function savePhone(){
       var oud=num(el.dataset.rate);
       return oud>0?oud:S.rate;
     })(),
+    costZ:(function(){
+      /* het deel van de verzendkosten vastzetten zodra het toestel klaar is */
+      var oud=num(el.dataset.costZ);
+      if(oud>0)return oud;
+      if(!sold&&!off)return 0;
+      var zid=el.dataset.zid||'';
+      var z=zid?zendingById(zid):null;
+      if(!z)return 0;
+      var n=zendingLeden(zid).length;
+      if(n<1)return 0;
+      var f2=document.getElementById('f_rate');
+      var kNu=(f2&&num(f2.value)>0)?num(f2.value):S.rate;
+      var kost=(z.costCur==='MAD')?(num(z.cost)/(kNu||1)):num(z.cost);
+      return kost/n;
+    })(),
     soldAt:sold?document.getElementById('f_sold').value:'',
     note:(document.getElementById('f_note').value||'').trim()
   };
@@ -1048,6 +1115,113 @@ function herinnerTekst(it,lang){
   return L.join('\n');
 }
 
+/* ── de zendingen zelf ── */
+function zNaam(it){return esc(it.brand+' '+it.model+(it.storage?' '+it.storage:''))}
+
+function zHint(z){
+  var n=zendingLeden(z.id).length, k=zendingKostEUR(z,null);
+  var u='Wordt gelijk verdeeld over de toestellen in deze zending. Nu '
+   + n+' '+(n===1?'toestel':'toestellen');
+  if(n>0&&k>0.005)u+=' van '+eur(k/n)+' elk';
+  return u+'.';
+}
+
+function openZendingen(){
+  var lijst=(S.zendingen||[]).slice(0).sort(function(a,b){
+    return String(b.date||'').localeCompare(String(a.date||''));
+  });
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">Zendingen</div></div>';
+  if(!lijst.length){
+    h+='<div class="note">Een zending is een pakket naar Marokko. Je vult de verzendkosten een keer in en '
+     + 'de app verdeelt ze gelijk over de toestellen die erin zitten. Daarna zet je ze met een tik allemaal '
+     + 'op verstuurd.</div>';
+  }
+  lijst.forEach(function(z){
+    var leden=zendingLeden(z.id), n=leden.length, k=zendingKostEUR(z,null);
+    var d=[n+' '+(n===1?'toestel':'toestellen')];
+    if(n>0&&k>0.005)d.push(eur(k/n)+' per toestel');
+    var wacht=0;
+    leden.forEach(function(x){if(!x.sold&&!x.off&&!x.sent)wacht++});
+    if(wacht>0)d.push('<span style="color:var(--saffron)">'+wacht+' nog niet verstuurd</span>');
+    h+='<button class="dl" data-act="zopen" data-z="'+z.id+'">'
+     + '<div><div class="nm">'+(z.date?dateNL(z.date):'zonder datum')+'</div>'
+     + '<div class="dsub">'+d.join(' &middot; ')+(z.note?('<br>'+esc(z.note)):'')+'</div></div>'
+     + '<div class="val"><b>'+pv(eur(k))+'</b><span class="s">'+pv(mad(k*S.rate))+'</span></div></button>';
+  });
+  h+='<button class="outline" style="margin-top:20px" data-act="znew">+ Nieuwe zending</button>';
+  h+='</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+}
+
+function openZending(zid){
+  var z=zendingById(zid);
+  if(!z){openZendingen();return}
+  var leden=zendingLeden(zid), n=leden.length, k=zendingKostEUR(z,null);
+  var kans=S.items.filter(function(x){return x.zid===zid||(!x.sold&&!x.off)});
+  kans.sort(function(a,b){
+    var am=a.zid===zid?0:1, bm=b.zid===zid?0:1;
+    if(am!==bm)return am-bm;
+    return String(b.createdAt||'').localeCompare(String(a.createdAt||''));
+  });
+
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="zendingen">&#8249;</button>'
+   + '<div class="t">Zending</div></div>';
+
+  h+='<div class="label">Verstuurd op</div><input class="in" type="date" id="z_date" value="'+esc(z.date||today())+'">';
+  h+='<div class="label">Verzendkosten</div><div class="mini">'
+   + '<input class="in mono" id="z_cost" inputmode="decimal" placeholder="0,00" value="'+esc(num(z.cost)>0?comma(num(z.cost),2):'')+'">'
+   + '<button class="no" data-act="zcur" data-z="'+zid+'">'+(z.costCur==='MAD'?'DH':'&euro;')+'</button></div>'
+   + '<div class="hint" id="z_hint">'+zHint(z)+'</div>';
+  h+='<div class="label">Notitie</div><input class="in" id="z_note" placeholder="bv. met de bus, of via mijn broer" value="'+esc(z.note||'')+'">';
+
+  h+='<div class="label">Toestellen in deze zending</div>';
+  if(!kans.length){
+    h+='<div class="note">Je hebt geen toestellen die je kunt versturen. Voeg eerst een telefoon toe.</div>';
+  }
+  kans.forEach(function(x){
+    var inZ=x.zid===zid;
+    var elders=(!inZ&&x.zid)?zendingById(x.zid):null;
+    var d=[STATUSLABEL[statusOf(x)]];
+    if(elders)d.push('zit in de zending van '+(elders.date?dateNL(elders.date):'zonder datum'));
+    h+='<button class="dl" data-act="ztoggle" data-z="'+zid+'" data-id="'+x.id+'">'
+     + '<div><div class="nm">'+(inZ?'<span class="tik">&#10003;</span>':'')+zNaam(x)+'</div>'
+     + '<div class="dsub">'+d.join(' &middot; ')+'</div></div>'
+     + '<div class="val">'+(inZ
+        ? ('<b style="color:var(--sky)">'+(n>0&&k>0.005?pv(eur(k/n)):'&mdash;')+'</b>')
+        : '<span class="dim" style="font-size:12px">toevoegen</span>')
+     + '</div></button>';
+  });
+
+  var wacht=leden.filter(function(x){return !x.sold&&!x.off&&!x.sent});
+  if(wacht.length)
+    h+='<button class="outline" style="margin-top:20px" data-act="zsend" data-z="'+zid+'">Zet '
+     + (wacht.length===1?'dit toestel':('deze '+wacht.length+' toestellen'))+' op verstuurd</button>';
+  else if(n>0)
+    h+='<div class="note">Alle toestellen in deze zending staan al op verstuurd, verkocht of afgeschreven.</div>';
+
+  h+='<div class="divider"></div>'
+   + '<button class="outline quiet" data-act="zdel" data-z="'+zid+'">'
+   + (ui.zdel===zid?'Zeker? Tik nog een keer om te verwijderen':'Zending verwijderen')+'</button>'
+   + '<div class="hint">Je toestellen blijven staan; alleen het pakket en de verdeling van de verzendkosten gaan weg. '
+   + 'Bij toestellen die je al verkocht hebt blijft hun deel van de kosten staan.</div>';
+
+  h+='</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="zendingen">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+
+  /* meteen opslaan bij typen, zoals de koers in de instellingen */
+  var dEl=document.getElementById('z_date');
+  if(dEl)dEl.addEventListener('input',function(){z.date=this.value;save();render()});
+  var cEl=document.getElementById('z_cost');
+  if(cEl)cEl.addEventListener('input',function(){
+    z.cost=num(this.value); save();
+    var hh=document.getElementById('z_hint'); if(hh)hh.innerHTML=zHint(z);
+    render();
+  });
+  var nEl=document.getElementById('z_note');
+  if(nEl)nEl.addEventListener('input',function(){z.note=this.value;save()});
+}
+
 /* de tegels aantikken: alles per telefoon eronder */
 function openDrill(k){
   var t=totals();
@@ -1073,9 +1247,11 @@ function openDrill(k){
       deel.forEach(function(it){
         var ink=toEURk(it,it.buy,it.buyCur);
         var kt=toEURk(it,it.costT,it.costTCur||'EUR'), kp=toEURk(it,it.costP,it.costPCur||'EUR');
-        var tot=ink+kt+kp, d=['inkoop '+eur(ink)];
+        var kz=zendingDeelEUR(it);
+        var tot=ink+kt+kp+kz, d=['inkoop '+eur(ink)];
         if(kt>0.005)d.push('transport '+eur(kt));
         if(kp>0.005)d.push((it.costWhat?esc(it.costWhat):'onderdelen')+' '+eur(kp));
+        if(kz>0.005)d.push('zending '+eur(kz));
         var dg=dagenTekst(it);
         h+=regel(naam(it), pv(d.join(' &middot; '))+(dg?'<br>'+dg:''), pv(eur(tot)), pv(mad(tot*kr(it))));
       });
@@ -1267,7 +1443,7 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 14 &middot; september 2026</div>'
+   + '<div class="ver">Telefoonboek versie 15 &middot; september 2026</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
@@ -1529,6 +1705,7 @@ function zetTerug(tekst,foutmelding){
   }
   snapshotBij(true);   /* zodat je een verkeerde terugzetting kunt terugdraaien */
   S.items=d.items;
+  if(Array.isArray(d.zendingen))S.zendingen=d.zendingen;
   if(d.rate)S.rate=d.rate;
   if(d.checks)S.checks=d.checks;
   if(d.lang)ui.lang=d.lang;
@@ -1580,7 +1757,7 @@ function openReceipt(id){
   document.getElementById('sheet').innerHTML=h;
 }
 
-function backupText(){return JSON.stringify({v:1,rate:S.rate,items:S.items})}
+function backupText(){return JSON.stringify({v:1,rate:S.rate,items:S.items,zendingen:S.zendingen})}
 
 /* Op een iPhone-app werkt opslaan als bestand niet. Delen wel. */
 function shareBackup(btn){
@@ -1615,7 +1792,7 @@ function showBackup(){
 
 function download(){
   S.lastBackup=today(); save();
-  var blob=new Blob([JSON.stringify({v:1,rate:S.rate,items:S.items},null,2)],{type:'application/json'});
+  var blob=new Blob([JSON.stringify({v:1,rate:S.rate,items:S.items,zendingen:S.zendingen},null,2)],{type:'application/json'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download='telefoonboek-'+today()+'.json';
@@ -1638,6 +1815,41 @@ document.addEventListener('click',function(e){
   if(act==='savephone'){savePhone();return}
   if(act==='settings'){openSettings();return}
   if(act==='drill'){openDrill(b.dataset.k);return}
+  if(act==='zendingen'){ui.zdel='';openZendingen();return}
+  if(act==='zopen'){ui.zdel='';openZending(b.dataset.z);return}
+  if(act==='znew'){
+    var nz={id:uid(),date:today(),cost:0,costCur:'EUR',note:''};
+    S.zendingen=(S.zendingen||[]).concat([nz]);
+    save(); ui.zdel=''; openZending(nz.id); render(); return;
+  }
+  if(act==='zcur'){
+    var zc=zendingById(b.dataset.z);
+    if(zc){zc.costCur=(zc.costCur==='MAD')?'EUR':'MAD';save();openZending(zc.id);render()}
+    return;
+  }
+  if(act==='ztoggle'){
+    var zt=b.dataset.z;
+    if(it){it.zid=(it.zid===zt)?'':zt;save();openZending(zt);render()}
+    return;
+  }
+  if(act==='zsend'){
+    var zs=zendingById(b.dataset.z);
+    if(zs){
+      zendingLeden(zs.id).forEach(function(x){
+        if(x.sold||x.off)return;
+        x.sent=true; x.sentAt=zs.date||today();
+      });
+      save(); openZending(zs.id); render();
+    }
+    return;
+  }
+  if(act==='zdel'){
+    var zd=b.dataset.z;
+    if(ui.zdel!==zd){ui.zdel=zd;openZending(zd);return}
+    S.items.forEach(function(x){if(x.zid===zd)x.zid=''});
+    S.zendingen=(S.zendingen||[]).filter(function(x){return x.id!==zd});
+    ui.zdel=''; save(); openZendingen(); render(); return;
+  }
   if(act==='remind'){
     if(it&&it.phone)window.open('https://wa.me/'+waNumber(it.phone)+'?text='+encodeURIComponent(herinnerTekst(it,ui.lang)),'_blank');
     return;
@@ -1754,6 +1966,10 @@ document.addEventListener('click',function(e){
       if(!num(it.sell)){openForm(it); setStatusSeg('sold'); return}
       it.sold=true; it.soldAt=today(); it.sent=false;
       if(!num(it.rate))it.rate=S.rate;   /* koers van vandaag vastzetten */
+      if(!num(it.costZ)){                /* en het deel van de verzendkosten */
+        var zdl=zendingDeelEUR(it);
+        if(zdl>0.005)it.costZ=zdl;
+      }
       save();render();return;
     }
     it.sold=false; it.soldAt=''; it.sent=!!it.sentAt;
@@ -1777,7 +1993,7 @@ document.addEventListener('click',function(e){
 
   if(act==='copy'){
     S.lastBackup=today(); save();
-    var txt=JSON.stringify({v:1,rate:S.rate,items:S.items});
+    var txt=JSON.stringify({v:1,rate:S.rate,items:S.items,zendingen:S.zendingen});
     if(navigator.clipboard&&navigator.clipboard.writeText){
       navigator.clipboard.writeText(txt).then(function(){b.textContent='Gekopieerd'},function(){b.textContent='Kopiëren lukt niet — gebruik het bestand'});
     } else b.textContent='Kopiëren lukt niet — gebruik het bestand';
