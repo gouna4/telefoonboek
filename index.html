@@ -28,7 +28,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;background:var(--night);color:var(--sand);font-family:var(--sans);
-  font-size:16px;-webkit-text-size-adjust:100%}
+  font-size:16px;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 body{min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .dim{color:var(--dim)}
@@ -75,7 +75,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
   font-size:14px;font-weight:700;letter-spacing:.01em}
 
 /* ── tabbladen ── */
-.tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin-top:22px;
+.tabswrap{position:relative;margin-top:22px}
+/* een vage rand rechts, zodat je ziet dat er nog tabbladen achter zitten */
+.tabswrap.meer:after{content:'';position:absolute;right:2px;top:2px;bottom:2px;width:40px;pointer-events:none;
+  border-radius:0 12px 12px 0;background:linear-gradient(to right,rgba(33,27,22,0),var(--surface))}
+.tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;
   overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex:0 0 auto;border-radius:10px;padding:9px 11px;font-size:12.5px;font-weight:600;color:var(--dim);letter-spacing:-.01em;white-space:nowrap}
@@ -138,8 +142,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .empty span{display:block;font-size:14px;color:var(--dim);margin-top:7px}
 
 /* ── onderbalk ── */
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(22,18,15,.96);
-  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(8px)}
+/* Geen backdrop-filter op een vaste balk: tijdens het scrollen op een telefoon
+   tekent de browser hem dan te laat en schuift hij mee met de bladzijde.
+   Een eigen laag (translateZ) houdt hem op zijn plek. */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--night);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);
+  transform:translateZ(0);-webkit-backface-visibility:hidden}
 .bar-in{max-width:480px;margin:0 auto;padding:12px 18px 16px}
 .bar-in.two{display:flex;gap:8px}
 .bar-in.two .primary{flex:1}
@@ -177,8 +185,9 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .soldbox{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:4px 15px 18px;margin-top:12px}
 .soldbox .label{margin-top:16px}
 .profit{font-family:var(--mono);font-size:14px;margin-top:11px;line-height:1.7}
-.sbar{position:fixed;left:0;right:0;bottom:0;background:rgba(22,18,15,.96);border-top:1px solid var(--line);
-  padding-bottom:env(safe-area-inset-bottom);backdrop-filter:blur(8px)}
+.sbar{position:fixed;left:0;right:0;bottom:0;background:var(--night);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+  transform:translateZ(0);-webkit-backface-visibility:hidden}
 .sbar-in{max-width:480px;margin:0 auto;display:flex;gap:8px;padding:12px 18px 16px}
 .sbar .cancel{border:1px solid var(--line);color:var(--dim);border-radius:13px;padding:14px 18px;font-size:14px;font-weight:600}
 .sbar .save{flex:1;background:var(--azure);color:#1B1108;border-radius:13px;padding:14px;font-size:15px;font-weight:700}
@@ -203,6 +212,10 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .sortbtn{color:var(--dim);font-size:12px;font-weight:600;padding:6px 11px;
   border:1px solid var(--line);border-radius:999px;white-space:nowrap}
 .sortbtn.on{color:var(--night);background:var(--sand);border-color:var(--sand)}
+.oudecheck{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;
+  background:var(--surface);border:1px solid var(--saffron);border-radius:14px;padding:13px;font-size:14px}
+.oudecheck button{flex:0 0 auto;border:1px solid var(--saffron);color:var(--saffron);border-radius:11px;
+  padding:9px 12px;font-weight:600;font-size:13px}
 .fotorij{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .fototh{width:62px;height:62px;border-radius:12px;overflow:hidden;border:1px solid var(--line);
   padding:0;background:var(--night)}
@@ -302,7 +315,11 @@ var CATALOG={
 };
 var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
 
-var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',pin:'',hide:false,snaps:[],zendingen:[]};
+/* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
+   anders ziet de app zijn eigen wijziging niet. */
+var VERSIE='19', VERSIEDATUM='september 2026';
+
+var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[]};
 var ui={tab:'all',q:'',payFor:null,confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:''};
 
 function load(){
@@ -314,6 +331,7 @@ function load(){
       if(Array.isArray(d.items))S.items=d.items;
       if(d.checks)S.checks=d.checks;
       if(d.checkBrand)S.checkBrand=d.checkBrand;
+      if(d.checkAt)S.checkAt=d.checkAt;
       if(d.lang)ui.lang=d.lang;
       if(d.lastBackup)S.lastBackup=d.lastBackup;
       if(d.lastFoto)S.lastFoto=d.lastFoto;
@@ -349,7 +367,7 @@ function save(){
   for(var poging=0;poging<4;poging++){
     try{
       localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
-        checkBrand:S.checkBrand,lang:ui.lang,lastBackup:S.lastBackup,lastFoto:S.lastFoto,
+        checkBrand:S.checkBrand,checkAt:S.checkAt,lang:ui.lang,lastBackup:S.lastBackup,lastFoto:S.lastFoto,
         pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen}));
       ui.msg='';return true;
     }catch(e){
@@ -870,13 +888,13 @@ function statusOf(it){
 var STATUSLABEL={stock:'Op voorraad',sent:'Verstuurd',client:'Bij klant',paid:'Betaald',off:'Afgeschreven'};
 
 function totals(){
-  var t={mijn:0,onze:0,open:0,openMAD:0,invest:0,voorraad:0,verstuurd:0,verkocht:0,bijklant:0,af:0,verloren:0};
+  var t={mijn:0,onze:0,open:0,openMAD:0,invest:0,voorraad:0,verstuurd:0,verkocht:0,bijklant:0,af:0,verloren:0,afOnze:0};
   S.items.forEach(function(it){
     var inkoop=toEURk(it,it.buy,it.buyCur), door=doorEUR(it), kost=kostenEUR(it);
     if(it.off){
       /* afgeschreven: dit geld staat niet meer vast, het is weg. Ook voor je
          collega, want zijn inleg was de doorgegeven prijs. */
-      t.af++; t.verloren+=inkoop+kost;
+      t.af++; t.verloren+=inkoop+kost; t.afOnze+=door;
       t.mijn-=inkoop+kost; t.onze-=door;
       return;
     }
@@ -949,7 +967,7 @@ function render(){
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v17</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; v'+VERSIE+'</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -969,6 +987,8 @@ function render(){
    + '</div>'
    + '<div class="band"><div class="k">Onze winst samen</div><div class="v">'+mad(t.onze*S.rate)+'</div>'
    + '<div class="s">'+eur(t.onze)+' &middot; gerekend met de doorgegeven prijzen</div>'
+   + (t.af>0?('<div class="s" style="color:var(--clay)">waarvan &minus; '+mad(t.afOnze*S.rate)
+      +' afgeschreven ('+t.af+' '+(t.af===1?'toestel':'toestellen')+')</div>'):'')
    + '<div class="segsm"><button class="'+(ui.lang==='ar'?'on':'')+'" data-act="lang" data-l="ar">عربي</button>'
    + '<button class="'+(ui.lang==='nl'?'on':'')+'" data-act="lang" data-l="nl">Nederlands</button></div>'
    + '<button class="go" data-act="share">Doorgeven via WhatsApp</button></div>'
@@ -986,9 +1006,9 @@ function render(){
      + 'Samsung: menu &#8942; &rarr; <b>Toevoegen aan startscherm</b>. Daarna opent hij als een echte app.</div>';
   }
 
-  h+='<div class="tabs">'
+  h+='<div class="tabswrap" id="tabswrap"><div class="tabs" id="tabs">'
    + tabBtn('all','Alles')+tabBtn('stock','Voorraad')+tabBtn('sent','Verstuurd')+tabBtn('client','Bij klant')+tabBtn('paid','Betaald')+tabBtn('off','Afgeschreven')
-   + '</div>';
+   + '</div></div>';
   if(S.items.length>5) h+='<input class="search" id="q" placeholder="Zoek op model of klant" value="'+esc(ui.q)+'">';
   h+=tabTotaal(list);
   h+=sortRow(list);
@@ -1011,6 +1031,20 @@ function render(){
   var q=document.getElementById('q');
   if(q){q.addEventListener('input',function(){ui.q=q.value;var p=q.selectionStart;render();var n=document.getElementById('q');if(n){n.focus();n.setSelectionRange(p,p)}});}
   vulAlleFotos(list);
+
+  /* past de rij niet? Schuif het gekozen tabblad in beeld en zet de vage rand
+     rechts, maar haal die weg als je aan het eind bent */
+  var tabsEl=document.getElementById('tabs'), tabsWrap=document.getElementById('tabswrap');
+  if(tabsEl&&tabsWrap&&tabsEl.scrollWidth>tabsEl.clientWidth+2){
+    var actief=tabsEl.querySelector('.tab.on');
+    if(actief)tabsEl.scrollLeft=Math.max(0,actief.offsetLeft-(tabsEl.clientWidth-actief.offsetWidth)/2);
+    var randBij=function(){
+      var meer=tabsEl.scrollLeft+tabsEl.clientWidth < tabsEl.scrollWidth-2;
+      tabsWrap.className=meer?'tabswrap meer':'tabswrap';
+    };
+    randBij();
+    tabsEl.addEventListener('scroll',randBij);
+  }
 
   var pf=document.getElementById('payinput');
   if(pf)pf.focus();
@@ -1909,7 +1943,7 @@ function openSettings(){
         + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
       : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
         + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie 17 &middot; september 2026</div>'
+   + '<div class="ver">Telefoonboek versie '+VERSIE+' &middot; '+VERSIEDATUM+'</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
   document.getElementById('s_rate').addEventListener('input',function(){
@@ -2141,6 +2175,16 @@ function openCheck(){
 
   var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
    + '<div class="t">Controleren bij inkoop</div></div>';
+
+  /* Vinkjes blijven staan tot je ze leegmaakt. Zeg het dus als ze niet van
+     vandaag zijn, anders loop je langs een lijst die al is afgevinkt. */
+  if(gedaan>0&&String(S.checkAt||'')!==today()){
+    h+='<div class="oudecheck"><div><b>Je vorige controle'
+     + (S.checkAt?(' van '+dateNL(S.checkAt)):'')+' staat er nog</b>'
+     + '<div class="dim" style="font-size:12px;margin-top:3px">'+gedaan+' van de '+totaal
+     + ' vinkjes zijn van die keer.</div></div>'
+     + '<button data-act="resetchecks">Opnieuw beginnen</button></div>';
+  }
 
   h+='<div class="label">Merk</div><div class="selwrap"><select class="in" id="c_brand">'
    + Object.keys(CODES).map(function(b){return '<option value="'+esc(b)+'"'+(b===brand?' selected':'')+'>'+esc(b)+'</option>'}).join('')
@@ -2408,6 +2452,7 @@ document.addEventListener('click',function(e){
   if(act==='tick'){
     var k=b.dataset.k;
     if(S.checks[k])delete S.checks[k]; else S.checks[k]=1;
+    S.checkAt=today();          /* zodat je morgen ziet dat dit oude vinkjes zijn */
     save();
     b.className='chk'+(S.checks[k]?' on':'');
     var cnt=document.querySelector('.count');
@@ -2418,7 +2463,7 @@ document.addEventListener('click',function(e){
     }
     return;
   }
-  if(act==='resetchecks'){S.checks={};save();openCheck();return}
+  if(act==='resetchecks'){S.checks={};S.checkAt='';save();openCheck();return}
   if(act==='copycode'){
     var code=b.dataset.c, sp=b.querySelector('span'), orig=sp.textContent;
     if(navigator.clipboard&&navigator.clipboard.writeText){
