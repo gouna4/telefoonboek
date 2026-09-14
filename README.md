@@ -1,6 +1,7 @@
 # Telefoonboek
 
-Boekhouding voor het in- en verkopen van telefoons: Nederland → Marokko.
+Boekhouding voor het in- en verkopen van telefoons en horloges:
+Nederland → Marokko.
 Rekent euro's en dirham automatisch naar elkaar om.
 
 **Geen server, geen account, geen internet nodig.** Wat je invult blijft in de
@@ -10,6 +11,8 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 ## Wat het bijhoudt
 
 - Inkoop en verkoop per toestel, in euro's en dirham, met een instelbare koers
+- Telefoon of horloge per toestel: eigen merken en modellen, en bij een
+  horloge de kastmaat en of er 4G in zit in plaats van opslag
 - Een tweede, doorgegeven inkoopprijs, zodat je eigen marge privé blijft
 - Kosten voor transport, en vervangen onderdelen als lijst: per onderdeel
   een naam en een bedrag, met een plusje voor de volgende
@@ -48,8 +51,8 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
 Verhoog het nummer op twee plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `var VERSIE='20'` bovenaan het script
-2. `sw.js` — `telefoonboek-v20`
+1. `index.html` — `var VERSIE='21'` bovenaan het script
+2. `sw.js` — `telefoonboek-v21`
 
 De kop en de regel onderaan de instellingen halen het nummer daar zelf op.
 
