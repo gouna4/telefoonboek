@@ -180,6 +180,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .seg button.on-sent{background:var(--sky);color:#0B1226}
 .seg.three button{font-size:13px;padding:11px 4px;white-space:nowrap}
 .seg button.on-off{background:var(--clay);color:#FDEEEC}
+.seg button.on-soort{background:var(--azure);color:#1B1108}
 .seg.four{flex-wrap:wrap}
 .seg.four button{flex:1 1 44%;font-size:13px;padding:11px 4px;white-space:nowrap}
 .soldbox{background:var(--surface2);border:1px solid var(--line);border-radius:16px;padding:4px 15px 18px;margin-top:12px}
@@ -322,9 +323,30 @@ var CATALOG={
 };
 var STORAGES=['64 GB','128 GB','256 GB','512 GB','1 TB'];
 
+/* Horloges hebben hun eigen merken en modellen, en in plaats van opslag
+   gaat het om de kastmaat en of er een simkaart in kan. */
+var WATCHES={
+ 'Apple Watch':['Series 3','Series 4','Series 5','SE (2020)','Series 6','Series 7','Series 8','SE (2022)','Ultra','Series 9','Ultra 2','Series 10'],
+ 'Samsung':['Galaxy Watch 4','Galaxy Watch 4 Classic','Galaxy Watch 5','Galaxy Watch 5 Pro','Galaxy Watch 6','Galaxy Watch 6 Classic','Galaxy Watch FE','Galaxy Watch 7','Galaxy Watch Ultra'],
+ 'Huawei':['Watch GT 3','Watch GT 3 Pro','Watch GT 4','Watch GT 5','Watch Fit 3','Watch Ultimate','Watch D'],
+ 'Xiaomi':['Watch S3','Watch 2 Pro','Redmi Watch 4','Smart Band 9'],
+ 'Amazfit':['GTR 4','GTS 4','T-Rex 3','Bip 5'],
+ 'Garmin':['Venu 3','Forerunner 265','Instinct 2'],
+ 'Anders':[]
+};
+var MATEN=['38 mm','40 mm','41 mm','42 mm','44 mm','45 mm','46 mm','47 mm','49 mm'];
+var VERBINDING=['GPS','GPS + 4G'];
+
+/* alles wat per soort verschilt op een plek */
+function soortVan(it){return (it&&it.soort==='wat')?'wat':'tel'}
+function merkenVan(srt){return srt==='wat'?WATCHES:CATALOG}
+function matenVan(srt){return srt==='wat'?MATEN:STORAGES}
+function maatLabel(srt){return srt==='wat'?'Maat':'Opslag'}
+function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
+
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='20', VERSIEDATUM='september 2026';
+var VERSIE='21', VERSIEDATUM='september 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[]};
 var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:''};
@@ -995,7 +1017,8 @@ function render(){
     .filter(function(it){
       var q=ui.q.trim().toLowerCase();
       if(!q)return true;
-      return [it.brand,it.model,it.storage,it.customer,it.note,it.imei].join(' ').toLowerCase().indexOf(q)>-1;
+      return [it.brand,it.model,it.storage,it.verb,it.customer,it.note,it.imei,soortNaam(soortVan(it))]
+        .join(' ').toLowerCase().indexOf(q)>-1;
     })
     .sort(sorteer);
 
@@ -1052,7 +1075,7 @@ function render(){
   h+='</div><div class="pad">';
 
   if(!list.length){
-    h+='<div class="empty"><b>Nog geen telefoons hier</b><span>Voeg je eerste toestel toe met de knop onderin.</span></div>';
+    h+='<div class="empty"><b>Nog geen toestellen hier</b><span>Voeg je eerste telefoon of horloge toe met de knop onderin.</span></div>';
   } else {
     list.forEach(function(it){h+=card(it)});
   }
@@ -1179,6 +1202,7 @@ function card(it){
   var h='<div class="card">';
   h+='<div class="chead"><div><div class="cname">'+esc(it.brand)+' '+esc(it.model)+'</div><div class="cmeta">'
    + [it.storage?esc(it.storage):'',
+      it.verb?esc(it.verb):'',
       num(it.battery)>0?('accu <b style="font-weight:600;color:'+(it.battery>=90?'var(--mint)':(it.battery>=80?'var(--saffron)':'var(--clay)'))+'">'+num(it.battery)+'%</b>'):'',
       it.sold?('verkocht '+dateNL(it.soldAt)):(it.sent?('verstuurd '+dateNL(it.sentAt||it.boughtAt)):('ingekocht '+dateNL(it.boughtAt))),
       (!it.sold&&!it.off)?dagenTekst(it):''].filter(Boolean).join(' &middot; ')
@@ -1291,11 +1315,21 @@ function costRow(label,id,val,cur,key){
    + '<button data-act="curtoggle" data-f="'+key+'" data-i="'+id+'" data-v="MAD" class="'+(cur==='MAD'?'on':'')+'">DH</button></span></div>';
 }
 
+/* de kop van het formulier volgt de soort */
+function titelVoor(srt,bestaat){
+  if(srt==='wat')return bestaat?'Horloge bewerken':'Nieuw horloge';
+  return bestaat?'Telefoon bewerken':'Nieuwe telefoon';
+}
+
+var formSoort='tel';
+
 function openForm(item){
   var it=item||null;
-  var known=it?!!CATALOG[it.brand]:true;
-  var brand=it?(known?it.brand:'Anders'):'iPhone';
-  var model=it?(known?it.model:''):'13 Pro Max';
+  formSoort=soortVan(it);
+  var CAT=merkenVan(formSoort);
+  var known=it?!!CAT[it.brand]:true;
+  var brand=it?(known?it.brand:'Anders'):(formSoort==='wat'?'Apple Watch':'iPhone');
+  var model=it?(known?it.model:''):(formSoort==='wat'?'Series 9':'13 Pro Max');
   var buyCur=it?it.buyCur:'EUR', sellCur=it?(it.sellCur||'MAD'):'MAD';
   var buyE=it&&it.buy?comma(toEURk(it,it.buy,it.buyCur),2):'';
   var buyM=it&&it.buy?String(Math.round(toMAD(it.buy,it.buyCur))):'';
@@ -1308,11 +1342,15 @@ function openForm(item){
   var toldE=it&&num(it.told)>0?comma(toEURk(it,it.told,toldCur),2):'';
 
   var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
-   + '<div class="t">'+(it?'Telefoon bewerken':'Nieuwe telefoon')+'</div></div>';
+   + '<div class="t" id="f_titel">'+titelVoor(formSoort,!!it)+'</div></div>';
 
-  h+='<div class="label">Merk</div><div class="selwrap"><select class="in" id="f_brand">'+options(Object.keys(CATALOG),brand)+'</select></div>';
+  h+='<div class="label">Wat is het</div><div class="seg" id="f_soort">'
+   + '<button data-s="tel" class="'+(formSoort==='tel'?'on-soort':'')+'">Telefoon</button>'
+   + '<button data-s="wat" class="'+(formSoort==='wat'?'on-soort':'')+'">Horloge</button></div>';
+
+  h+='<div class="label">Merk</div><div id="merkSlot"></div>';
   h+='<div id="typeSlot"></div>';
-  h+='<div class="label">Opslag</div><div class="selwrap"><select class="in" id="f_storage"><option value="">Niet ingevuld</option>'+options(STORAGES,it?it.storage:'')+'</select></div>';
+  h+='<div id="maatSlot"></div>';
 
   h+='<div class="pair" style="margin-top:20px">'
    + '<div><div class="cap">Accu %</div><input class="in mono" id="f_battery" inputmode="numeric" placeholder="bv. 87" value="'+esc(it&&num(it.battery)>0?String(num(it.battery)):'')+'"></div>'
@@ -1413,16 +1451,44 @@ function openForm(item){
   el.dataset.payments=JSON.stringify(it&&it.payments?it.payments:[]);
   el.dataset.created=it?(it.createdAt||''):'';
 
-  var brandSel=document.getElementById('f_brand');
+  function merkSel(){return document.getElementById('f_brand')}
+
+  /* de merkenlijst hangt aan de gekozen soort, dus die tekenen we apart */
+  function tekenMerk(kies){
+    var slot=document.getElementById('merkSlot');
+    if(!slot)return;
+    var lijst=Object.keys(merkenVan(formSoort));
+    if(lijst.indexOf(kies)<0)kies=lijst[0];
+    slot.innerHTML='<div class="selwrap"><select class="in" id="f_brand">'+options(lijst,kies)+'</select></div>';
+    var sel=merkSel();
+    if(sel)sel.addEventListener('change',function(){model='';drawType()});
+    drawType();
+  }
+
+  /* opslag bij een telefoon, maat en verbinding bij een horloge */
+  function tekenMaat(kiesMaat,kiesVerb){
+    var slot=document.getElementById('maatSlot');
+    if(!slot)return;
+    var u='<div class="label">'+maatLabel(formSoort)+'</div>'
+     + '<div class="selwrap"><select class="in" id="f_storage"><option value="">Niet ingevuld</option>'
+     + options(matenVan(formSoort),kiesMaat||'')+'</select></div>';
+    if(formSoort==='wat'){
+      u+='<div class="label">Verbinding</div><div class="selwrap"><select class="in" id="f_verb">'
+       + '<option value="">Niet ingevuld</option>'+options(VERBINDING,kiesVerb||'')+'</select></div>'
+       + '<div class="hint">Een horloge met 4G is meer waard. Alleen die heeft een IMEI.</div>';
+    }
+    slot.innerHTML=u;
+  }
+
   function drawType(){
-    var b=brandSel.value, slot=document.getElementById('typeSlot');
+    var b=merkSel()?merkSel().value:'', slot=document.getElementById('typeSlot');
     if(b==='Anders'){
       slot.innerHTML='<div class="pair"><div><div class="label" style="margin-top:20px">Merknaam</div>'
        + '<input class="in" id="f_brandFree" placeholder="bv. Vivo" value="'+esc(it&&!known?it.brand:'')+'"></div>'
        + '<div><div class="label" style="margin-top:20px">Type</div>'
        + '<input class="in" id="f_modelFree" placeholder="bv. V30" value="'+esc(it&&!known?it.model:'')+'"></div></div>';
     } else {
-      var arr=CATALOG[b]||[];
+      var arr=merkenVan(formSoort)[b]||[];
       var cur=(arr.indexOf(model)>-1)?model:arr[0];
       slot.innerHTML='<div class="label">Type</div><div class="selwrap"><select class="in" id="f_model">'+options(arr,cur)+'</select></div>';
     }
@@ -1439,7 +1505,7 @@ function openForm(item){
   function vulHist(){
     var doel=document.getElementById('f_hist');
     if(!doel)return;
-    var merk=brandSel.value, mdl='';
+    var merk=merkSel()?merkSel().value:'', mdl='';
     if(merk==='Anders'){
       var bf=document.getElementById('f_brandFree'), mf=document.getElementById('f_modelFree');
       merk=bf?bf.value.trim():''; mdl=mf?mf.value.trim():'';
@@ -1451,8 +1517,26 @@ function openForm(item){
     doel.innerHTML=t2?('<span style="color:var(--azure)">'+t2+'</span>'):'';
   }
 
-  drawType();
-  brandSel.addEventListener('change',function(){model='';drawType()});
+  tekenMerk(brand);
+  tekenMaat(it?it.storage:'', it?it.verb:'');
+
+  /* Telefoon of horloge: alleen de drie vakjes die erbij horen tekenen we
+     opnieuw, zodat alles wat je al had ingevuld blijft staan. */
+  document.getElementById('f_soort').addEventListener('click',function(e){
+    var knop=e.target.closest('button');
+    if(!knop)return;
+    var nieuw=knop.dataset.s==='wat'?'wat':'tel';
+    if(nieuw===formSoort)return;
+    formSoort=nieuw;
+    model=(formSoort==='wat')?'Series 9':'13 Pro Max';   /* een gangbaar model voor */
+    [].forEach.call(this.querySelectorAll('button'),function(x){
+      x.className=(x.dataset.s===formSoort)?'on-soort':'';
+    });
+    var t=document.getElementById('f_titel');
+    if(t)t.textContent=titelVoor(formSoort,!!it);
+    tekenMerk(formSoort==='wat'?'Apple Watch':'iPhone');
+    tekenMaat('','');
+  });
 
   /* het formulier rekent met de koers die bij dit toestel hoort: het veld
      'Koers bij verkoop' als dat is ingevuld, anders de koers van nu */
@@ -1624,7 +1708,9 @@ function savePhone(){
     battery:num((document.getElementById('f_battery')||{}).value),
     imei:((document.getElementById('f_imei')||{}).value||'').trim(),
     phone:(((document.getElementById('f_phone')||{}).value||'').trim()),
-    storage:document.getElementById('f_storage').value,
+    soort:formSoort==='wat'?'wat':'tel',
+    storage:(function(e){return e?e.value:''})(document.getElementById('f_storage')),
+    verb:(formSoort==='wat')?((function(e){return e?e.value:''})(document.getElementById('f_verb'))):'',
     buy:buy, buyCur:buyCur, sold:sold, sell:sell, sellCur:sellCur,
     customer:sold?(document.getElementById('f_customer').value||'').trim():'',
     payments:payments,
