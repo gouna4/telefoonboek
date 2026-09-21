@@ -19,7 +19,7 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   dus je collega ziet per toestel één bedrag
 - Kosten voor transport, en vervangen onderdelen als lijst: per onderdeel
   een naam en een bedrag, met een plusje voor de volgende
-- Vijf standen: op voorraad, verstuurd (onderweg naar Marokko), bij klant
+- Zes standen: op voorraad, onderweg naar Marokko, aangekomen in Marokko, bij klant
   (verkocht maar niet afbetaald), betaald, afgeschreven
 - Per toestel waar je minimaal voor moet verkopen: om quitte te staan, en
   om ook naar je collega uit te komen
@@ -31,8 +31,11 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Zendingen: een pakket naar Marokko met verzendkosten die zich gelijk
   verdelen over de toestellen erin, en in een tik allemaal op verstuurd
 - Bij doorgeven kies je met vinkjes welke groepen meegaan: verkocht, op
-  voorraad, onderweg of afgeschreven; de winst samen rekent alleen over de
-  groepen die je meestuurt
+  voorraad, onderweg, aangekomen of afgeschreven; de winst samen rekent
+  alleen over de groepen die je meestuurt
+- Een zending in een tik op verstuurd, en later in een tik op aangekomen
+- Instellingen waarschuwen als de kosten bij een toestel dubbel lijken te
+  zitten, met een knop om het recht te zetten
 - Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
 - Winst per maand, boven de winst per toestel
 - Een strook bovenaan als je een week geen back-up maakte
@@ -41,7 +44,9 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   winst niet verschuift als je de koers aanpast
 - Betalingen per klant, in euro of dirham, met wat er nog open staat
 - Accupercentage en IMEI
-- Controlelijst met testcodes per merk, voor bij de inkoop
+- Controlelijst voor bij de inkoop: voor een telefoon met de testcodes per
+  merk, voor een horloge een eigen lijst (loskoppelen van de vorige eigenaar,
+  glas, band, accu, 4G of GPS)
 - Bonnetje voor de klant en een overzicht voor je collega, in het Arabisch
 - Cijferslot en een knop om alle privébedragen te verbergen
 
