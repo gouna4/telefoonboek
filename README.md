@@ -30,6 +30,9 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Wat je eerder voor hetzelfde model kreeg, bij het invoeren en op de kaart
 - Zendingen: een pakket naar Marokko met verzendkosten die zich gelijk
   verdelen over de toestellen erin, en in een tik allemaal op verstuurd
+- Bij doorgeven kies je met vinkjes welke groepen meegaan: verkocht, op
+  voorraad, onderweg of afgeschreven; de winst samen rekent alleen over de
+  groepen die je meestuurt
 - Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
 - Winst per maand, boven de winst per toestel
 - Een strook bovenaan als je een week geen back-up maakte

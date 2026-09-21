@@ -268,6 +268,9 @@ button.dl{width:100%;text-align:left}
   align-items:center;justify-content:center;font-size:13px;font-weight:700;color:transparent;margin-top:1px}
 .chk.on .b{background:var(--mint);border-color:var(--mint);color:#0C2119}
 .chk.on .t{color:var(--dim);text-decoration:line-through}
+/* kiezen wat er meegaat, geen afvinklijst: dus niet doorstrepen */
+.chk.pick.on .t{color:var(--sand);text-decoration:none}
+.chk.pick .n{color:var(--dim);font-size:12px;margin-left:6px}
 .count{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:16px}
 .pre{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px;
   font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
@@ -346,9 +349,9 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='23', VERSIEDATUM='september 2026';
+var VERSIE='24', VERSIEDATUM='september 2026';
 
-var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[]};
+var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{}};
 var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:''};
 
 function load(){
@@ -368,6 +371,7 @@ function load(){
       if(d.hide)S.hide=d.hide;
       if(Array.isArray(d.snaps))S.snaps=d.snaps;
       if(Array.isArray(d.zendingen))S.zendingen=d.zendingen;
+      if(d.deel)S.deel=d.deel;
     }
     ui.tipOff=localStorage.getItem(KEY+'_tip')==='1';
   }catch(e){}
@@ -397,7 +401,7 @@ function save(){
     try{
       localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
         checkBrand:S.checkBrand,checkAt:S.checkAt,lang:ui.lang,lastBackup:S.lastBackup,lastFoto:S.lastFoto,
-        pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen}));
+        pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen,deel:S.deel}));
       ui.msg='';return true;
     }catch(e){
       /* Geen ruimte? Dan gaan de oudste herstelpunten eraf; je eigen boek gaat voor. */
@@ -2187,6 +2191,19 @@ function openSettings(){
 }
 
 /* ── doorstuurbericht, Arabisch of Nederlands ── */
+/* Welke groepen meegaan als je het bericht verstuurt. Niets aangevinkt staat
+   gelijk aan alles aan, zodat een oud boek zonder deze keuze gewoon werkt.
+   Je keuze blijft bewaard voor de volgende keer. */
+var DEELGROEPEN=[['verkocht','Verkocht'],['voorraad','Op voorraad'],['onderweg','Onderweg naar Marokko'],['af','Afgeschreven']];
+function deelAan(k){S.deel=S.deel||{};return S.deel[k]!==false}
+function deelAantal(k){
+  var n=0;
+  S.items.forEach(function(x){
+    var g=x.off?'af':(x.sold?'verkocht':(x.sent?'onderweg':'voorraad'));
+    if(g===k)n++;
+  });
+  return n;
+}
 var TXT={
   ar:{afgeschreven:'\u062E\u0633\u0627\u0631\u0629', onderweg:'\u0641\u064A \u0627\u0644\u0637\u0631\u064A\u0642', titel:'دفتر الهواتف', verkocht:'تم البيع', voorraad:'في المخزون',
       inkoop:'الشراء', verkoop:'البيع', winst:'الربح', samen:'الربح المشترك', dh:'درهم'},
@@ -2197,7 +2214,7 @@ function bedrag(eurBedrag,lang){
   return (eurBedrag*S.rate).toLocaleString('nl-NL',{maximumFractionDigits:0})+' '+TXT[lang].dh;
 }
 function shareText(lang){
-  var T=TXT[lang], t=totals();
+  var T=TXT[lang];
   var d=new Date(), dd=('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();
   var L=[T.titel+' — '+dd];
   var verkocht=S.items.filter(function(x){return x.sold});
@@ -2208,7 +2225,7 @@ function shareText(lang){
   /* een bedrag per toestel: de doorgegeven inkoop met transport, onderdelen en
      zending er al in. Geen losse kostenregel, dat wilde je niet in het bericht. */
   function regel(it){return '- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorKostEUR(it),lang)}
-  if(verkocht.length){
+  if(verkocht.length&&deelAan('verkocht')){
     L.push('',T.verkocht);
     verkocht.forEach(function(it){
       var dr=doorKostEUR(it), u=toEURk(it,it.sell,it.sellCur);
@@ -2216,19 +2233,26 @@ function shareText(lang){
       L.push('  '+T.inkoop+' '+bedrag(dr,lang)+' | '+T.verkoop+' '+bedrag(u,lang)+' | '+T.winst+' '+bedrag(u-dr,lang));
     });
   }
-  if(onderweg.length){
+  if(onderweg.length&&deelAan('onderweg')){
     L.push('',T.onderweg);
     onderweg.forEach(function(it){L.push(regel(it))});
   }
-  if(voorraad.length){
+  if(voorraad.length&&deelAan('voorraad')){
     L.push('',T.voorraad);
     voorraad.forEach(function(it){L.push(regel(it))});
   }
-  if(afgeschreven.length){
+  if(afgeschreven.length&&deelAan('af')){
     L.push('',T.afgeschreven);
     afgeschreven.forEach(function(it){L.push(regel(it))});
   }
-  L.push('',T.samen+': '+bedrag(t.onze,lang));
+  /* De winst samen hoort bij wat er in dit bericht staat. Laat je de verkochte
+     of de afgeschreven toestellen weg, dan verandert dat bedrag dus mee. */
+  var som=0, heeftSom=false;
+  if(deelAan('verkocht')&&verkocht.length){heeftSom=true;
+    verkocht.forEach(function(it){som+=toEURk(it,it.sell,it.sellCur)-doorKostEUR(it)})}
+  if(deelAan('af')&&afgeschreven.length){heeftSom=true;
+    afgeschreven.forEach(function(it){som-=doorKostEUR(it)})}
+  if(heeftSom)L.push('',T.samen+': '+bedrag(som,lang));
   return L.join('\n');
 }
 
@@ -2238,9 +2262,17 @@ function openShare(){
    + '<div class="t">Doorgeven</div></div>'
    + '<div class="segsm" style="margin-top:16px"><button class="'+(lang==='ar'?'on':'')+'" data-act="lang" data-l="ar">عربي</button>'
    + '<button class="'+(lang==='nl'?'on':'')+'" data-act="lang" data-l="nl">Nederlands</button></div>'
+   + '<div class="label" style="margin-top:20px">Wat gaat mee</div>'
+   + DEELGROEPEN.map(function(g){
+       var n=deelAantal(g[0]), aan=deelAan(g[0]);
+       return '<button class="chk pick'+(aan?' on':'')+'" data-act="deeltoggle" data-k="'+g[0]+'">'
+        + '<span class="b">&#10003;</span><span class="t">'+g[1]
+        + '<span class="n">'+n+' '+(n===1?'toestel':'toestellen')+'</span></span></button>';
+     }).join('')
    + '<div class="note">Per toestel een bedrag: de doorgegeven inkoop met transport en onderdelen er al in. '
    + 'Daarnaast de verkoop en de winst samen, alles in dirham. Je echte inkoop, je eigen marge en je eigen '
-   + 'winst staan er niet in, en de kosten staan er niet apart.</div>'
+   + 'winst staan er niet in, en de kosten staan er niet apart. De winst samen rekent alleen over de '
+   + 'groepen die meegaan.</div>'
    + '<div class="pre"'+(lang==='ar'?' dir="rtl" style="text-align:right"':'')+'>'+esc(txt)+'</div>'
    + '<button class="outline" data-act="sendshare">Versturen</button>'
    + '<button class="outline quiet" data-act="wa">Openen in WhatsApp</button>'
@@ -2667,6 +2699,17 @@ document.addEventListener('click',function(e){
   if(act==='lang'){
     ui.lang=b.dataset.l; save();
     if(document.querySelector('.pre'))openShare(); else render();
+    return;
+  }
+  if(act==='deeltoggle'){
+    var dk=b.dataset.k;
+    S.deel=S.deel||{};
+    /* de laatste mag niet uit: dan blijft er een leeg bericht over */
+    var aantalAan=0;
+    DEELGROEPEN.forEach(function(g){if(deelAan(g[0]))aantalAan++});
+    if(deelAan(dk)&&aantalAan<2)return;
+    S.deel[dk]=!deelAan(dk);
+    save(); openShare();
     return;
   }
   if(act==='tick'){
