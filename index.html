@@ -346,7 +346,7 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='21', VERSIEDATUM='september 2026';
+var VERSIE='22', VERSIEDATUM='september 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[]};
 var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:''};
@@ -916,9 +916,14 @@ function doorEUR(it){var v=num(it.told);return v>0?toEURk(it,it.told,it.toldCur|
 /* wat het toestel jou heeft gekost: inkoop plus transport en onderdelen */
 function kostprijsEUR(it){return toEURk(it,it.buy,it.buyCur)+kostenEUR(it)}
 
+/* wat het toestel samen heeft gekost: de doorgegeven inkoop plus dezelfde
+   kosten. Onderdelen, transport en zending gaan sinds v22 ook van de winst
+   samen af, dus je collega betaalt mee aan een scherm of een accu. */
+function doorKostEUR(it){return doorEUR(it)+kostenEUR(it)}
+
 /* de twee ondergrenzen bij verkoop: die van jou, en die van het verhaal naar je collega */
 function grenzen(it){
-  var eigen=kostprijsEUR(it), samen=doorEUR(it);
+  var eigen=kostprijsEUR(it), samen=doorKostEUR(it);
   return {eigen:eigen, samen:samen};
 }
 
@@ -949,15 +954,15 @@ function totals(){
     var inkoop=toEURk(it,it.buy,it.buyCur), door=doorEUR(it), kost=kostenEUR(it);
     if(it.off){
       /* afgeschreven: dit geld staat niet meer vast, het is weg. Ook voor je
-         collega, want zijn inleg was de doorgegeven prijs. */
-      t.af++; t.verloren+=inkoop+kost; t.afOnze+=door;
-      t.mijn-=inkoop+kost; t.onze-=door;
+         collega: zijn inleg was de doorgegeven prijs plus de kosten. */
+      t.af++; t.verloren+=inkoop+kost; t.afOnze+=door+kost;
+      t.mijn-=inkoop+kost; t.onze-=door+kost;
       return;
     }
     if(it.sold){
       t.verkocht++;
       var uit=toEURk(it,it.sell,it.sellCur);
-      t.mijn+=uit-inkoop-kost; t.onze+=uit-door;
+      t.mijn+=uit-inkoop-kost; t.onze+=uit-door-kost;
       t.open+=Math.max(0,uit-paidEUR(it));
       t.openMAD+=restMAD(it);
       if(statusOf(it)==='client')t.bijklant++;
@@ -1043,7 +1048,7 @@ function render(){
    + '<button class="stat" data-act="drill" data-k="invest"><div class="k">Geïnvesteerd'+lock()+' <span style="color:var(--azure)">&rsaquo;</span></div><div class="v">'+pv(eur(t.invest))+'</div><div class="s">'+(t.verstuurd>0?(t.voorraad+' hier &middot; '+t.verstuurd+' verstuurd'):(t.voorraad+' op voorraad'))+'</div></button>'
    + '</div>'
    + '<div class="band"><div class="k">Onze winst samen</div><div class="v">'+mad(t.onze*S.rate)+'</div>'
-   + '<div class="s">'+eur(t.onze)+' &middot; gerekend met de doorgegeven prijzen</div>'
+   + '<div class="s">'+eur(t.onze)+' &middot; gerekend met de doorgegeven prijzen, kosten eraf</div>'
    + (t.af>0?('<div class="s" style="color:var(--clay)">waarvan &minus; '+mad(t.afOnze*S.rate)
       +' afgeschreven ('+t.af+' '+(t.af===1?'toestel':'toestellen')+')</div>'):'')
    + '<div class="segsm"><button class="'+(ui.lang==='ar'?'on':'')+'" data-act="lang" data-l="ar">عربي</button>'
@@ -1208,7 +1213,7 @@ function card(it){
       (!it.sold&&!it.off)?dagenTekst(it):''].filter(Boolean).join(' &middot; ')
    + '</div></div><button class="pill '+({stock:'stock',sent:'sent',client:'client',paid:'sold',off:'off'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
 
-  var door=doorEUR(it), marge=door-inkoop, onze=verkoop-door;
+  var door=doorEUR(it), marge=door-inkoop, onze=verkoop-door-kost;
   h+='<div class="row"><span class="dim">Inkoop'+lock()+'</span><span class="r">'+pv(eur(inkoop)+' <span class="dim">&middot; '+mad(inkoop*kr(it))+'</span>')+'</span></div>';
   if(num(it.told)>0){
     h+='<div class="row"><span class="dim">Doorgegeven</span><span class="r">'+mad(door*kr(it))+' <span class="dim">&middot; '+eur(door)+'</span></span></div>';
@@ -1372,8 +1377,9 @@ function openForm(item){
    + '<div class="label" style="margin-top:18px">Vervangen onderdelen</div>'
    + '<div id="partList"></div>'
    + '<button class="partadd" data-act="partadd">+ onderdeel toevoegen</button>'
-   + '<div class="hint">Transport, een nieuw scherm of een accu: dit gaat van jouw winst af en blijft uit de '
-   + 'winst samen. Wil je dat je collega meebetaalt, tel het dan op bij de doorgegeven inkoop.</div>'
+   + '<div class="hint">Transport, een nieuw scherm of een accu: dit gaat van jouw winst af en ook van de '
+   + 'winst samen, dus je collega betaalt mee. In het doorgeven-bericht ziet hij een bedrag aan kosten, '
+   + 'niet waarvoor. Wil je iets zelf dragen, laat het dan hier leeg.</div>'
    + (function(){
        var z=(it&&it.zid)?zendingById(it.zid):null;
        if(!z&&!(it&&num(it.costZ)>0))return '';
@@ -2183,9 +2189,9 @@ function openSettings(){
 /* ── doorstuurbericht, Arabisch of Nederlands ── */
 var TXT={
   ar:{afgeschreven:'\u062E\u0633\u0627\u0631\u0629', onderweg:'\u0641\u064A \u0627\u0644\u0637\u0631\u064A\u0642', titel:'دفتر الهواتف', verkocht:'تم البيع', voorraad:'في المخزون',
-      inkoop:'الشراء', verkoop:'البيع', winst:'الربح', samen:'الربح المشترك', dh:'درهم'},
+      inkoop:'الشراء', kosten:'المصاريف', verkoop:'البيع', winst:'الربح', samen:'الربح المشترك', dh:'درهم'},
   nl:{titel:'Telefoonboek', verkocht:'VERKOCHT', voorraad:'NOG OP VOORRAAD', onderweg:'ONDERWEG NAAR MAROKKO', afgeschreven:'AFGESCHREVEN',
-      inkoop:'inkoop', verkoop:'verkoop', winst:'winst', samen:'WINST SAMEN', dh:'DH'}
+      inkoop:'inkoop', kosten:'kosten', verkoop:'verkoop', winst:'winst', samen:'WINST SAMEN', dh:'DH'}
 };
 function bedrag(eurBedrag,lang){
   return (eurBedrag*S.rate).toLocaleString('nl-NL',{maximumFractionDigits:0})+' '+TXT[lang].dh;
@@ -2199,25 +2205,29 @@ function shareText(lang){
   var voorraad=S.items.filter(function(x){return !x.sold&&!x.off&&!x.sent});
   var afgeschreven=S.items.filter(function(x){return x.off});
   function naam(it){return it.brand+' '+it.model+(it.storage?' '+it.storage:'')}
+  /* de kosten als een bedrag; niet uitgesplitst, dat hoeft je collega niet te weten */
+  function kostDeel(it){var k=kostenEUR(it);return k>0.005?' | '+T.kosten+' '+bedrag(k,lang):''}
+  function regel(it){return '- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorEUR(it),lang)+kostDeel(it)}
   if(verkocht.length){
     L.push('',T.verkocht);
     verkocht.forEach(function(it){
-      var dr=doorEUR(it), u=toEURk(it,it.sell,it.sellCur);
+      var dr=doorEUR(it), k=kostenEUR(it), u=toEURk(it,it.sell,it.sellCur);
       L.push('- '+naam(it));
-      L.push('  '+T.inkoop+' '+bedrag(dr,lang)+' | '+T.verkoop+' '+bedrag(u,lang)+' | '+T.winst+' '+bedrag(u-dr,lang));
+      L.push('  '+T.inkoop+' '+bedrag(dr,lang)+kostDeel(it)
+        +' | '+T.verkoop+' '+bedrag(u,lang)+' | '+T.winst+' '+bedrag(u-dr-k,lang));
     });
   }
   if(onderweg.length){
     L.push('',T.onderweg);
-    onderweg.forEach(function(it){L.push('- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorEUR(it),lang))});
+    onderweg.forEach(function(it){L.push(regel(it))});
   }
   if(voorraad.length){
     L.push('',T.voorraad);
-    voorraad.forEach(function(it){L.push('- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorEUR(it),lang))});
+    voorraad.forEach(function(it){L.push(regel(it))});
   }
   if(afgeschreven.length){
     L.push('',T.afgeschreven);
-    afgeschreven.forEach(function(it){L.push('- '+naam(it)+' | '+T.inkoop+' '+bedrag(doorEUR(it),lang))});
+    afgeschreven.forEach(function(it){L.push(regel(it))});
   }
   L.push('',T.samen+': '+bedrag(t.onze,lang));
   return L.join('\n');
@@ -2229,8 +2239,9 @@ function openShare(){
    + '<div class="t">Doorgeven</div></div>'
    + '<div class="segsm" style="margin-top:16px"><button class="'+(lang==='ar'?'on':'')+'" data-act="lang" data-l="ar">عربي</button>'
    + '<button class="'+(lang==='nl'?'on':'')+'" data-act="lang" data-l="nl">Nederlands</button></div>'
-   + '<div class="note">Alleen dit gaat mee: de doorgegeven inkoop, de verkoop en de winst samen, alles in dirham. '
-   + 'Je echte inkoop, je eigen marge en je eigen winst staan er niet in.</div>'
+   + '<div class="note">Alleen dit gaat mee: de doorgegeven inkoop, de kosten als een bedrag, de verkoop en de '
+   + 'winst samen, alles in dirham. Je echte inkoop, je eigen marge en je eigen winst staan er niet in, '
+   + 'en de kosten staan er niet uitgesplitst.</div>'
    + '<div class="pre"'+(lang==='ar'?' dir="rtl" style="text-align:right"':'')+'>'+esc(txt)+'</div>'
    + '<button class="outline" data-act="sendshare">Versturen</button>'
    + '<button class="outline quiet" data-act="wa">Openen in WhatsApp</button>'

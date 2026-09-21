@@ -14,6 +14,9 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Telefoon of horloge per toestel: eigen merken en modellen, en bij een
   horloge de kastmaat en of er 4G in zit in plaats van opslag
 - Een tweede, doorgegeven inkoopprijs, zodat je eigen marge privé blijft
+- Kosten als onderdelen, transport en zending gaan van jouw winst af en ook
+  van de winst samen; in het doorgeven-bericht staat één bedrag aan kosten,
+  niet waarvoor het was
 - Kosten voor transport, en vervangen onderdelen als lijst: per onderdeel
   een naam en een bedrag, met een plusje voor de volgende
 - Vijf standen: op voorraad, verstuurd (onderweg naar Marokko), bij klant
