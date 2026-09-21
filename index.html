@@ -101,6 +101,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .pill.client{background:var(--saffron);color:#241804;border:1px solid var(--saffron)}
 .pill.sent{background:var(--sky);color:#0B1226;border:1px solid var(--sky)}
 .pill.off{background:transparent;color:var(--clay);border:1px solid var(--clay)}
+/* aangekomen: gevuld groenblauw, tegenover voorraad dat alleen een rand heeft */
+.pill.arr{background:var(--teal);color:#08201E;border:1px solid var(--teal)}
 .row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;margin-top:8px}
 .row .r{font-family:var(--mono);text-align:right;letter-spacing:-.01em}
 .win{border-top:1px solid var(--line);padding-top:11px;margin-top:12px}
@@ -179,6 +181,10 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .seg button.on-sold{background:var(--mint);color:#0C2119}
 .seg button.on-sent{background:var(--sky);color:#0B1226}
 .seg.three button{font-size:13px;padding:11px 4px;white-space:nowrap}
+/* vijf standen passen niet op een rij op een telefoon: laat ze afbreken */
+.seg.five{flex-wrap:wrap}
+.seg.five button{flex:1 1 30%;font-size:13px;padding:10px 4px;white-space:nowrap}
+.seg button.on-arr{background:var(--teal);color:#08201E}
 .seg button.on-off{background:var(--clay);color:#FDEEEC}
 .seg button.on-soort{background:var(--azure);color:#1B1108}
 .seg.four{flex-wrap:wrap}
@@ -349,10 +355,10 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='24', VERSIEDATUM='september 2026';
+var VERSIE='25', VERSIEDATUM='september 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{}};
-var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:''};
+var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:''};
 
 function load(){
   try{
@@ -363,6 +369,7 @@ function load(){
       if(Array.isArray(d.items))S.items=d.items;
       if(d.checks)S.checks=d.checks;
       if(d.checkBrand)S.checkBrand=d.checkBrand;
+      if(d.checkSoort)S.checkSoort=d.checkSoort;
       if(d.checkAt)S.checkAt=d.checkAt;
       if(d.lang)ui.lang=d.lang;
       if(d.lastBackup)S.lastBackup=d.lastBackup;
@@ -400,7 +407,7 @@ function save(){
   for(var poging=0;poging<4;poging++){
     try{
       localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
-        checkBrand:S.checkBrand,checkAt:S.checkAt,lang:ui.lang,lastBackup:S.lastBackup,lastFoto:S.lastFoto,
+        checkBrand:S.checkBrand,checkSoort:S.checkSoort,checkAt:S.checkAt,lang:ui.lang,lastBackup:S.lastBackup,lastFoto:S.lastFoto,
         pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen,deel:S.deel}));
       ui.msg='';return true;
     }catch(e){
@@ -938,19 +945,22 @@ function dagenSinds(sd){
   return Math.max(0,Math.floor((new Date().setHours(0,0,0,0)-d.setHours(0,0,0,0))/86400000));
 }
 function dagenTekst(it){
-  var n=dagenSinds(it.sent?(it.sentAt||it.boughtAt):it.boughtAt);
+  var aangekomen=it.sent&&it.arr;
+  var n=dagenSinds(aangekomen?(it.arrAt||it.sentAt||it.boughtAt):(it.sent?(it.sentAt||it.boughtAt):it.boughtAt));
   if(n<0)return '';
-  if(n===0)return it.sent?'vandaag verstuurd':'vandaag ingekocht';
-  return n+' '+(n===1?'dag':'dagen')+' '+(it.sent?'onderweg':'op voorraad');
+  if(n===0)return aangekomen?'vandaag aangekomen':(it.sent?'vandaag verstuurd':'vandaag ingekocht');
+  return n+' '+(n===1?'dag':'dagen')+' '+(aangekomen?'in Marokko':(it.sent?'onderweg':'op voorraad'));
 }
 
 function statusOf(it){
   if(it.off)return 'off';
-  if(!it.sold)return it.sent?'sent':'stock';
+  /* verstuurd en al aangekomen is een eigen stand: het toestel ligt in Marokko
+     maar is nog niet verkocht */
+  if(!it.sold)return it.sent?(it.arr?'arr':'sent'):'stock';
   var rest=toEURk(it,it.sell,it.sellCur)-paidEUR(it);
   return rest>0.01?'client':'paid';
 }
-var STATUSLABEL={stock:'Op voorraad',sent:'Verstuurd',client:'Bij klant',paid:'Betaald',off:'Afgeschreven'};
+var STATUSLABEL={stock:'Op voorraad',sent:'Onderweg',arr:'Aangekomen',client:'Bij klant',paid:'Betaald',off:'Afgeschreven'};
 
 function totals(){
   var t={mijn:0,onze:0,open:0,openMAD:0,invest:0,voorraad:0,verstuurd:0,verkocht:0,bijklant:0,af:0,verloren:0,afOnze:0};
@@ -1073,12 +1083,12 @@ function render(){
   }
 
   h+='<div class="tabswrap" id="tabswrap"><div class="tabs" id="tabs">'
-   + tabBtn('all','Alles')+tabBtn('stock','Voorraad')+tabBtn('sent','Verstuurd')+tabBtn('client','Bij klant')+tabBtn('paid','Betaald')+tabBtn('off','Afgeschreven')
+   + tabBtn('all','Alles')+tabBtn('stock','Voorraad')+tabBtn('sent','Onderweg')+tabBtn('arr','Aangekomen')+tabBtn('client','Bij klant')+tabBtn('paid','Betaald')+tabBtn('off','Afgeschreven')
    + '</div></div>';
   if(S.items.length>5) h+='<input class="search" id="q" placeholder="Zoek op model of klant" value="'+esc(ui.q)+'">';
   h+=tabTotaal(list);
   h+=sortRow(list);
-  if(ui.tab==='all'||ui.tab==='stock'||ui.tab==='sent')
+  if(ui.tab==='all'||ui.tab==='stock'||ui.tab==='sent'||ui.tab==='arr')
     h+='<button class="zbtn" data-act="zendingen">Zendingen'
      + ((S.zendingen||[]).length?(' &middot; '+(S.zendingen||[]).length):'')+' &rsaquo;</button>';
   h+='</div><div class="pad">';
@@ -1092,7 +1102,7 @@ function render(){
 
   document.getElementById('app').innerHTML='<div class="wrap">'+h+'</div>'
    + '<div class="bar"><div class="bar-in two"><button class="second" data-act="check">Controleren</button>'
-   + '<button class="primary" data-act="new">+ Telefoon</button></div></div>';
+   + '<button class="primary" data-act="new">+ Toestel</button></div></div>';
 
   var q=document.getElementById('q');
   if(q){q.addEventListener('input',function(){ui.q=q.value;var p=q.selectionStart;render();var n=document.getElementById('q');if(n){n.focus();n.setSelectionRange(p,p)}});}
@@ -1345,7 +1355,7 @@ function openForm(item){
   var selE=it&&it.sell?comma(toEURk(it,it.sell,it.sellCur),2):'';
   var selM=it&&it.sell?String(Math.round(toMAD(it.sell,it.sellCur))):'';
   var sold=it?!!it.sold:false;
-  var st=(it&&it.off)?'off':(sold?'sold':((it&&it.sent)?'sent':'stock'));
+  var st=(it&&it.off)?'off':(sold?'sold':((it&&it.sent)?((it&&it.arr)?'arr':'sent'):'stock'));
   var toldCur=it?(it.toldCur||'MAD'):'MAD';
   var toldM=it&&num(it.told)>0?String(Math.round(toMAD(it.told,toldCur))):'';
   var toldE=it&&num(it.told)>0?comma(toEURk(it,it.told,toldCur),2):'';
@@ -1399,9 +1409,10 @@ function openForm(item){
   h+='<div class="label">Waar moet je minimaal voor verkopen</div><div class="profit" id="f_floor"></div>';
   h+='<div class="hint" id="f_hist"></div>';
 
-  h+='<div class="label">Status</div><div class="seg four" id="f_seg">'
+  h+='<div class="label">Status</div><div class="seg five" id="f_seg">'
    + '<button data-st="stock" class="'+(st==='stock'?'on-stock':'')+'">Op voorraad</button>'
-   + '<button data-st="sent" class="'+(st==='sent'?'on-sent':'')+'">Verstuurd</button>'
+   + '<button data-st="sent" class="'+(st==='sent'?'on-sent':'')+'">Onderweg</button>'
+   + '<button data-st="arr" class="'+(st==='arr'?'on-arr':'')+'">Aangekomen</button>'
    + '<button data-st="sold" class="'+(st==='sold'?'on-sold':'')+'">Verkocht</button>'
    + '<button data-st="off" class="'+(st==='off'?'on-off':'')+'">Afgeschreven</button></div>';
 
@@ -1415,7 +1426,14 @@ function openForm(item){
 
   h+='<div id="sentBox" '+(st==='sent'?'':'hidden')+'><div class="soldbox">'
    + '<div class="label">Verstuurd op</div><input class="in" type="date" id="f_sent" value="'+esc(it?(it.sentAt||today()):today())+'">'
-   + '<div class="hint">De telefoon is onderweg naar Marokko. Hij staat nog niet verkocht, dus je geld staat er nog in.</div>'
+   + '<div class="hint">Het toestel is onderweg naar Marokko. Hij staat nog niet verkocht, dus je geld staat er nog in.</div>'
+   + '</div></div>';
+
+  h+='<div id="arrBox" '+(st==='arr'?'':'hidden')+'><div class="soldbox" style="border-color:var(--teal)">'
+   + '<div class="label">Verstuurd op</div><input class="in" type="date" id="f_sent2" value="'+esc(it?(it.sentAt||today()):today())+'">'
+   + '<div class="label">Aangekomen op</div><input class="in" type="date" id="f_arr" value="'+esc(it?(it.arrAt||today()):today())+'">'
+   + '<div class="hint">Het toestel ligt in Marokko en is nog niet verkocht. Je geld staat er nog in, '
+   + 'maar het is niet meer onderweg.</div>'
    + '</div></div>';
 
   h+='<div id="soldBox" '+(sold?'':'hidden')+'><div class="soldbox">'
@@ -1454,6 +1472,7 @@ function openForm(item){
   el.innerHTML=h;
   el.dataset.id=it?it.id:'';
   el.dataset.buyCur=buyCur; el.dataset.sellCur=sellCur; el.dataset.st=st; el.dataset.sentAt=it?(it.sentAt||''):''; el.dataset.offAt=it?(it.offAt||''):'';
+  el.dataset.arr=(it&&it.arr)?'1':''; el.dataset.arrAt=it?(it.arrAt||''):'';
   el.dataset.rate=it&&num(it.rate)>0?String(num(it.rate)):'';
   el.dataset.zid=it?(it.zid||''):''; el.dataset.costZ=it&&num(it.costZ)>0?String(num(it.costZ)):'';
   el.dataset.toldCur=toldCur;
@@ -1657,7 +1676,7 @@ function partsEUR(koers){
   return uit;
 }
 
-/* zet de drie statusknoppen en de bijbehorende vakken goed */
+/* zet de vijf statusknoppen en de bijbehorende vakken goed */
 function setStatusSeg(s){
   var el=document.getElementById('sheet'), seg=document.getElementById('f_seg');
   if(!el||!seg)return;
@@ -1665,9 +1684,11 @@ function setStatusSeg(s){
   var btns=seg.querySelectorAll('button');
   btns[0].className=s==='stock'?'on-stock':'';
   btns[1].className=s==='sent'?'on-sent':'';
-  btns[2].className=s==='sold'?'on-sold':'';
-  btns[3].className=s==='off'?'on-off':'';
+  btns[2].className=s==='arr'?'on-arr':'';
+  btns[3].className=s==='sold'?'on-sold':'';
+  btns[4].className=s==='off'?'on-off':'';
   document.getElementById('sentBox').hidden=s!=='sent';
+  document.getElementById('arrBox').hidden=s!=='arr';
   document.getElementById('soldBox').hidden=s!=='sold';
   document.getElementById('offBox').hidden=s!=='off';
 }
@@ -1680,7 +1701,9 @@ function savePhone(){
   var finalBrand=brand==='Anders'?((bFree&&bFree.value.trim())||'Anders'):brand;
   var finalModel=brand==='Anders'?(mFree?mFree.value.trim():''):(mSel?mSel.value:'');
   var st=el.dataset.st||'stock';
-  var sold=st==='sold', sent=st==='sent', off=st==='off';
+  var sold=st==='sold', aangekomen=st==='arr', sent=st==='sent'||aangekomen, off=st==='off';
+  /* verkocht? dan blijft staan of hij eerder is aangekomen, dat is geschiedenis */
+  var arr=aangekomen||(sold&&el.dataset.arr==='1');
   var buyCur=el.dataset.buyCur||'EUR', sellCur=el.dataset.sellCur||'MAD';
   var buy=buyCur==='MAD'?num(document.getElementById('f_buyM').value):num(document.getElementById('f_buyE').value);
   var sell=0;
@@ -1726,7 +1749,18 @@ function savePhone(){
     payments:payments,
     boughtAt:document.getElementById('f_bought').value,
     sent:sent,
-    sentAt:(sent||el.dataset.sentAt)?((document.getElementById('f_sent')||{}).value||''):'',
+    sentAt:(function(){
+      if(!sent&&!el.dataset.sentAt)return '';
+      /* bij aangekomen staat de verstuurdatum in het tweede vakje */
+      var v=document.getElementById(aangekomen?'f_sent2':'f_sent');
+      return (v&&v.value)||el.dataset.sentAt||'';
+    })(),
+    arr:arr,
+    arrAt:(function(){
+      if(!arr)return '';
+      var v=document.getElementById('f_arr');
+      return (v&&v.value)||el.dataset.arrAt||today();
+    })(),
     off:off,
     offAt:(off||el.dataset.offAt)?((document.getElementById('f_off')||{}).value||''):'',
     offWhy:off?(((document.getElementById('f_offwhy')||{}).value||'').trim()):'',
@@ -1889,8 +1923,13 @@ function openZending(zid){
   if(wacht.length)
     h+='<button class="outline" style="margin-top:20px" data-act="zsend" data-z="'+zid+'">Zet '
      + (wacht.length===1?'dit toestel':('deze '+wacht.length+' toestellen'))+' op verstuurd</button>';
-  else if(n>0)
-    h+='<div class="note">Alle toestellen in deze zending staan al op verstuurd, verkocht of afgeschreven.</div>';
+  /* een pakket komt in een keer aan, dus dat hoef je niet per toestel te doen */
+  var onderweg=leden.filter(function(x){return !x.sold&&!x.off&&x.sent&&!x.arr});
+  if(onderweg.length)
+    h+='<button class="outline" style="margin-top:10px" data-act="zarr" data-z="'+zid+'">Pakket is aangekomen: zet '
+     + (onderweg.length===1?'dit toestel':('deze '+onderweg.length+' toestellen'))+' op aangekomen</button>';
+  if(!wacht.length&&!onderweg.length&&n>0)
+    h+='<div class="note">Alle toestellen in deze zending staan al op aangekomen, verkocht of afgeschreven.</div>';
 
   h+='<div class="divider"></div>'
    + '<button class="outline quiet" data-act="zdel" data-z="'+zid+'">'
@@ -2086,6 +2125,25 @@ function openSettings(){
    + '<button class="outline quiet" data-act="rate1030">Terug naar 10,30</button>'
    + '<div class="note">Bedragen blijven staan in de valuta waarin je ze invulde. Alleen de omrekening volgt deze koers. '
    + 'Verkochte toestellen houden de koers van hun eigen verkoopdag, zodat je oude winst niet verschuift.</div>'
+   + (function(){
+       var v=dubbelVerdacht();
+       if(!v.length)return '';
+       var uit='<div class="divider"></div><div class="label">Kosten misschien dubbel</div>'
+        + '<div class="note">Bij ' + (v.length===1?'dit toestel':('deze '+v.length+' toestellen'))
+        + ' ligt de doorgegeven inkoop precies de kosten boven je echte inkoop. Heb je die er toen zelf '
+        + 'bij opgeteld? Dan zitten ze er nu twee keer in, want de app rekent ze er al af. '
+        + 'Tik op een toestel om de kosten uit de doorgegeven prijs te halen.</div>';
+       v.forEach(function(r){
+         uit+='<button class="dl" data-act="dubbelfix" data-id="'+r.it.id+'">'
+          + '<div><div class="nm">'+esc(r.it.brand)+' '+esc(r.it.model)+'</div>'
+          + '<div class="dsub">kosten '+eur(r.kost)+' &middot; doorgegeven ligt '+eur(r.extra)+' boven je inkoop</div></div>'
+          + '<div class="val"><span class="dim" style="font-size:12px">'
+          + (ui.dubbel===r.it.id?'zeker?':'rechtzetten')+'</span></div></button>';
+       });
+       uit+='<div class="hint">Klopt het wel en wil je dat je collega extra meebetaalt? Laat het dan staan; '
+        + 'dit lijstje verdwijnt zodra het verschil niet meer gelijk is aan de kosten.</div>';
+       return uit;
+     })()
    + '<div class="divider"></div>'
    + '<div class="label">Jouw boek</div>'
    + '<div class="mono dim" style="font-size:14px">'+S.items.length+' toestellen &middot; '+t.verkocht+' verkocht &middot; winst '+eur(t.mijn)+'</div>'
@@ -2190,25 +2248,46 @@ function openSettings(){
   });
 }
 
+/* Tot versie 21 stond in de app het advies: wil je dat je collega meebetaalt
+   aan een reparatie, tel dat bedrag dan op bij de doorgegeven inkoop. Sinds v22
+   gaan de kosten daar zelf al af. Heb je het toen met de hand gedaan, dan zit
+   het er twee keer in. Zulke toestellen zoeken we hier op: het verschil tussen
+   de doorgegeven inkoop en je echte inkoop is dan ongeveer gelijk aan de
+   kosten. We veranderen niets zonder dat je erop tikt. */
+function dubbelVerdacht(){
+  var uit=[];
+  S.items.forEach(function(it){
+    var kost=kostenEUR(it);
+    if(kost<0.5)return;                       /* zonder kosten kan er niks dubbel */
+    if(!(num(it.told)>0))return;              /* geen aparte doorgegeven prijs */
+    var inkoop=toEURk(it,it.buy,it.buyCur), door=doorEUR(it);
+    var extra=door-inkoop;
+    if(extra<0.5)return;                      /* niks bovenop je inkoop gezet */
+    var afwijking=Math.abs(extra-kost);
+    if(afwijking<=Math.max(1,kost*0.12))uit.push({it:it,kost:kost,extra:extra});
+  });
+  return uit;
+}
+
 /* ── doorstuurbericht, Arabisch of Nederlands ── */
 /* Welke groepen meegaan als je het bericht verstuurt. Niets aangevinkt staat
    gelijk aan alles aan, zodat een oud boek zonder deze keuze gewoon werkt.
    Je keuze blijft bewaard voor de volgende keer. */
-var DEELGROEPEN=[['verkocht','Verkocht'],['voorraad','Op voorraad'],['onderweg','Onderweg naar Marokko'],['af','Afgeschreven']];
+var DEELGROEPEN=[['verkocht','Verkocht'],['voorraad','Op voorraad'],['onderweg','Onderweg naar Marokko'],['aangekomen','Aangekomen in Marokko'],['af','Afgeschreven']];
 function deelAan(k){S.deel=S.deel||{};return S.deel[k]!==false}
 function deelAantal(k){
   var n=0;
   S.items.forEach(function(x){
-    var g=x.off?'af':(x.sold?'verkocht':(x.sent?'onderweg':'voorraad'));
+    var g=x.off?'af':(x.sold?'verkocht':(x.sent?(x.arr?'aangekomen':'onderweg'):'voorraad'));
     if(g===k)n++;
   });
   return n;
 }
 var TXT={
   ar:{afgeschreven:'\u062E\u0633\u0627\u0631\u0629', onderweg:'\u0641\u064A \u0627\u0644\u0637\u0631\u064A\u0642', titel:'دفتر الهواتف', verkocht:'تم البيع', voorraad:'في المخزون',
-      inkoop:'الشراء', verkoop:'البيع', winst:'الربح', samen:'الربح المشترك', dh:'درهم'},
+      inkoop:'الشراء', aangekomen:'في المغرب', verkoop:'البيع', winst:'الربح', samen:'الربح المشترك', dh:'درهم'},
   nl:{titel:'Telefoonboek', verkocht:'VERKOCHT', voorraad:'NOG OP VOORRAAD', onderweg:'ONDERWEG NAAR MAROKKO', afgeschreven:'AFGESCHREVEN',
-      inkoop:'inkoop', verkoop:'verkoop', winst:'winst', samen:'WINST SAMEN', dh:'DH'}
+      inkoop:'inkoop', aangekomen:'AANGEKOMEN IN MAROKKO', verkoop:'verkoop', winst:'winst', samen:'WINST SAMEN', dh:'DH'}
 };
 function bedrag(eurBedrag,lang){
   return (eurBedrag*S.rate).toLocaleString('nl-NL',{maximumFractionDigits:0})+' '+TXT[lang].dh;
@@ -2218,7 +2297,8 @@ function shareText(lang){
   var d=new Date(), dd=('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear();
   var L=[T.titel+' — '+dd];
   var verkocht=S.items.filter(function(x){return x.sold});
-  var onderweg=S.items.filter(function(x){return !x.sold&&!x.off&&x.sent});
+  var onderweg=S.items.filter(function(x){return !x.sold&&!x.off&&x.sent&&!x.arr});
+  var aangekomen=S.items.filter(function(x){return !x.sold&&!x.off&&x.sent&&x.arr});
   var voorraad=S.items.filter(function(x){return !x.sold&&!x.off&&!x.sent});
   var afgeschreven=S.items.filter(function(x){return x.off});
   function naam(it){return it.brand+' '+it.model+(it.storage?' '+it.storage:'')}
@@ -2236,6 +2316,10 @@ function shareText(lang){
   if(onderweg.length&&deelAan('onderweg')){
     L.push('',T.onderweg);
     onderweg.forEach(function(it){L.push(regel(it))});
+  }
+  if(aangekomen.length&&deelAan('aangekomen')){
+    L.push('',T.aangekomen);
+    aangekomen.forEach(function(it){L.push(regel(it))});
   }
   if(voorraad.length&&deelAan('voorraad')){
     L.push('',T.voorraad);
@@ -2365,6 +2449,38 @@ var TIPS=[
  'Laat nooit meer dan een kwart van je geld in één toestel zitten. Eén misser mag je niet stilzetten.'
 ];
 
+/* Een horloge is geen telefoon: testcodes als *#06# doen er niks, en simlock
+   bestaat er niet. Dit is de lijst die er wel bij hoort. */
+var WATCHCHECKS=[
+ ['Losgekoppeld van de vorige eigenaar',[
+  ['w1','Horloge is gewist terwijl jij ernaast stond (Instellingen, Alles wissen)'],
+  ['w2','Bij Apple: losgekoppeld van het Apple-account, Zoek mijn staat uit'],
+  ['w3','Bij Samsung of Huawei: uitgelogd en de koppeling met zijn telefoon verbroken'],
+  ['w4','Zelf gekoppeld met je eigen telefoon, helemaal tot in de app'],
+  ['w5','Serienummer gelezen in de instellingen en gefotografeerd']
+ ]],
+ ['Kast, glas en band',[
+  ['w6','Glas rondom bekeken: geen barst, geen diepe kras over de rand'],
+  ['w7','Wit en zwart beeld: geen vlekken, dode pixels of groene zweem'],
+  ['w8','Touch werkt tot in de hoeken, en de kroon of knop draait en klikt'],
+  ['w9','Band zit erbij en past; weet je welke maat het is'],
+  ['w10','Achterkant heel: de sensorglaasjes zijn niet gebarsten']
+ ]],
+ ['Werkt alles',[
+  ['w11','Accugezondheid bekeken en genoteerd'],
+  ['w12','Oplader pakt meteen en het laadicoon komt op'],
+  ['w13','Hartslag en zuurstof geven een meting'],
+  ['w14','Luidspreker, microfoon en trillen'],
+  ['w15','Waterdicht: geen spoor van vocht of eerdere reparatie'],
+  ['w16','4G-versie? Dan een IMEI en een eigen simprofiel; GPS-versie heeft dat niet']
+ ]],
+ ['Afronden',[
+  ['w17','Prijs afgesproken'],
+  ['w18','Doorgegeven prijs bepaald'],
+  ['w19','Pas betaald toen alles hierboven klopte']
+ ]]
+];
+
 var CHECKS=[
  ['Papieren en sloten',[
   ['a1','IMEI met *#06# opgevraagd en vergeleken met de simlade en de doos'],
@@ -2399,11 +2515,13 @@ var CHECKS=[
 ];
 
 function openCheck(){
+  var soort=S.checkSoort==='wat'?'wat':'tel';
+  var lijst=soort==='wat'?WATCHCHECKS:CHECKS;
   var brand=S.checkBrand||'iPhone';
   if(!CODES[brand])brand='Ander merk';
   var c=CODES[brand];
   var totaal=0,gedaan=0;
-  CHECKS.forEach(function(g){g[1].forEach(function(r){totaal++;if(S.checks[r[0]])gedaan++})});
+  lijst.forEach(function(g){g[1].forEach(function(r){totaal++;if(S.checks[r[0]])gedaan++})});
 
   var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
    + '<div class="t">Controleren bij inkoop</div></div>';
@@ -2418,26 +2536,36 @@ function openCheck(){
      + '<button data-act="resetchecks">Opnieuw beginnen</button></div>';
   }
 
+  h+='<div class="segsm" style="margin-top:16px">'
+   + '<button class="'+(soort==='tel'?'on':'')+'" data-act="checksoort" data-s="tel">Telefoon</button>'
+   + '<button class="'+(soort==='wat'?'on':'')+'" data-act="checksoort" data-s="wat">Horloge</button></div>';
+
+  if(soort==='wat'){
+    h+='<div class="hint" style="margin-top:12px">Een horloge heeft geen testmenu met codes en geen simlock. '
+     + 'Het gaat hier om het loskoppelen van de vorige eigenaar, het glas en de accu.</div>';
+  } else
   h+='<div class="label">Merk</div><div class="selwrap"><select class="in" id="c_brand">'
    + Object.keys(CODES).map(function(b){return '<option value="'+esc(b)+'"'+(b===brand?' selected':'')+'>'+esc(b)+'</option>'}).join('')
    + '</select></div>';
 
-  if(c.note)h+='<div class="hint" style="margin-top:8px">'+esc(c.note)+'</div>';
+  if(soort==='tel'&&c.note)h+='<div class="hint" style="margin-top:8px">'+esc(c.note)+'</div>';
 
   h+='<button class="outline quiet" data-act="tips">'+(ui.tips?'Tips verbergen':'Tips voor de afspraak')+'</button>';
   if(ui.tips){
     h+='<div class="tips"><ul>'+TIPS.map(function(t){return '<li>'+t+'</li>'}).join('')+'</ul></div>';
   }
 
-  h+='<div class="grp">Codes voor '+esc(brand)+'</div>';
-  h+='<div class="hint">Tik op een code om hem te kopiëren, plak hem daarna in de bel-app.</div>';
-  c.list.forEach(function(r){
-    h+='<button class="code" data-act="copycode" data-c="'+esc(r[0])+'"><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></button>';
-  });
-  h+='<div class="warn" style="margin-top:14px">Codes die beginnen met <span class="mono">*2767*</span> of '
-   + '<span class="mono">*#*#7780</span> wissen het hele toestel. Typ die nooit in bij een telefoon die nog niet van jou is.</div>';
+  if(soort==='tel'){
+    h+='<div class="grp">Codes voor '+esc(brand)+'</div>';
+    h+='<div class="hint">Tik op een code om hem te kopiëren, plak hem daarna in de bel-app.</div>';
+    c.list.forEach(function(r){
+      h+='<button class="code" data-act="copycode" data-c="'+esc(r[0])+'"><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></button>';
+    });
+    h+='<div class="warn" style="margin-top:14px">Codes die beginnen met <span class="mono">*2767*</span> of '
+     + '<span class="mono">*#*#7780</span> wissen het hele toestel. Typ die nooit in bij een telefoon die nog niet van jou is.</div>';
+  }
 
-  CHECKS.forEach(function(g){
+  lijst.forEach(function(g){
     h+='<div class="grp">'+esc(g[0])+'</div>';
     g[1].forEach(function(r){
       var on=!!S.checks[r[0]];
@@ -2447,12 +2575,13 @@ function openCheck(){
   });
 
   h+='<div class="count">'+gedaan+' van '+totaal+' afgevinkt</div>'
-   + '<button class="outline quiet" data-act="resetchecks">Lijst leegmaken voor de volgende telefoon</button>';
+   + '<button class="outline quiet" data-act="resetchecks">Lijst leegmaken voor het volgende toestel</button>';
 
   h+='</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   document.getElementById('sheet').innerHTML=h;
 
-  document.getElementById('c_brand').addEventListener('change',function(){
+  var brandSel=document.getElementById('c_brand');
+  if(brandSel)brandSel.addEventListener('change',function(){
     S.checkBrand=this.value; save(); openCheck();
   });
 }
@@ -2628,6 +2757,17 @@ document.addEventListener('click',function(e){
     }
     return;
   }
+  if(act==='zarr'){
+    var za=zendingById(b.dataset.z);
+    if(za){
+      zendingLeden(za.id).forEach(function(x){
+        if(x.sold||x.off||!x.sent)return;
+        x.arr=true; x.arrAt=today();
+      });
+      save(); openZending(za.id); render();
+    }
+    return;
+  }
   if(act==='zdel'){
     var zd=b.dataset.z;
     if(ui.zdel!==zd){ui.zdel=zd;openZending(zd);return}
@@ -2637,6 +2777,19 @@ document.addEventListener('click',function(e){
   }
   if(act==='remind'){
     if(it&&it.phone)window.open('https://wa.me/'+waNumber(it.phone)+'?text='+encodeURIComponent(herinnerTekst(it,ui.lang)),'_blank');
+    return;
+  }
+  if(act==='dubbelfix'){
+    var df=S.items.filter(function(x){return x.id===b.dataset.id})[0];
+    if(!df)return;
+    if(ui.dubbel!==df.id){ui.dubbel=df.id;openSettings();return}
+    /* de kosten uit de doorgegeven prijs halen, in de munt waarin die staat */
+    var kostEUR=kostenEUR(df);
+    var cur=df.toldCur||'MAD';
+    var nieuw=cur==='MAD'?(num(df.told)-kostEUR*kr(df)):(num(df.told)-kostEUR);
+    df.told=Math.max(0,Math.round(nieuw*100)/100);
+    ui.dubbel='';
+    save(); openSettings(); render();
     return;
   }
   if(act==='rate1030'){S.rate=10.3;save();openSettings();render();return}
@@ -2695,6 +2848,7 @@ document.addEventListener('click',function(e){
     if(inp)inp.dispatchEvent(new Event('input',{bubbles:true}));
     return;
   }
+  if(act==='checksoort'){S.checkSoort=b.dataset.s==='wat'?'wat':'tel';save();openCheck();return}
   if(act==='tips'){ui.tips=!ui.tips;openCheck();return}
   if(act==='lang'){
     ui.lang=b.dataset.l; save();
@@ -2757,8 +2911,9 @@ document.addEventListener('click',function(e){
   if(act==='toggle'){
     /* een afgeschreven toestel niet per ongeluk terugzetten: open het formulier */
     if(it.off){openForm(it);return}
-    /* op voorraad -> verstuurd -> verkocht, en met nog een tik weer terug */
+    /* op voorraad -> verstuurd -> aangekomen -> verkocht, en met nog een tik terug */
     if(!it.sold&&!it.sent){it.sent=true; it.sentAt=today(); save();render();return}
+    if(!it.sold&&!it.arr){it.arr=true; it.arrAt=today(); save();render();return}
     if(!it.sold){
       if(!num(it.sell)){openForm(it); setStatusSeg('sold'); return}
       it.sold=true; it.soldAt=today(); it.sent=false;
