@@ -46,7 +46,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .sub{font-size:12px;color:var(--dim);margin-top:3px;letter-spacing:.02em}
 .icon-btn{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:10px;
   display:flex;align-items:center;justify-content:center}
-.board{display:flex;align-items:baseline;justify-content:space-between;width:100%;padding:14px 18px 12px;font-size:13px}
+.board{display:flex;align-items:baseline;justify-content:space-between;width:100%;padding:14px 18px 12px;
+  font-size:13px;min-height:44px}
 .board b{color:var(--saffron);font-family:var(--mono);font-weight:600;font-size:15px;letter-spacing:-.01em}
 .zellige{height:8px;
   background-image:linear-gradient(45deg,var(--line) 25%,transparent 25%,transparent 75%,var(--line) 75%),
@@ -59,30 +60,29 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px 14px;
   display:block;width:100%;text-align:left}
-.stat .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim)}
+.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim)}
 .stat .v{font-family:var(--mono);font-size:21px;font-weight:600;margin-top:8px;letter-spacing:-.03em;word-break:break-all}
-.stat .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:3px}
+.stat .s{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:3px}
 .meta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);margin-top:10px;padding:0 3px}
 
 /* ── de balk voor samen ── */
 .band{position:relative;overflow:hidden;background:linear-gradient(150deg,var(--surface2),var(--surface));
   border:1px solid var(--azure);border-radius:18px;padding:16px;margin-top:12px}
 .band:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--azure)}
-.band .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--azure);font-weight:600}
+.band .k{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--azure);font-weight:600}
 .band .v{font-family:var(--mono);font-size:24px;font-weight:600;margin-top:8px;letter-spacing:-.03em}
-.band .s{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px;line-height:1.5}
+.band .s{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:4px;line-height:1.5}
 .band .go{width:100%;margin-top:14px;background:var(--azure);color:#1B1108;border-radius:12px;padding:13px;
   font-size:14px;font-weight:700;letter-spacing:.01em}
 
 /* ── tabbladen ── */
 .tabswrap{position:relative;margin-top:22px}
-/* een vage rand rechts, zodat je ziet dat er nog tabbladen achter zitten */
-.tabswrap.meer:after{content:'';position:absolute;right:2px;top:2px;bottom:2px;width:40px;pointer-events:none;
-  border-radius:0 12px 12px 0;background:linear-gradient(to right,rgba(33,27,22,0),var(--surface))}
-.tabs{display:flex;gap:3px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;
-  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.tabs::-webkit-scrollbar{display:none}
-.tab{flex:0 0 auto;border-radius:10px;padding:9px 11px;font-size:12.5px;font-weight:600;color:var(--dim);letter-spacing:-.01em;white-space:nowrap}
+/* Zeven tabbladen passen niet op een rij op een telefoon. Ze breken daarom af
+   naar een tweede rij: alles in een oogopslag, niemand hoeft zijwaarts te vegen. */
+.tabs{display:flex;flex-wrap:wrap;gap:4px;background:var(--surface);border:1px solid var(--line);
+  border-radius:14px;padding:4px}
+.tab{flex:1 1 auto;border-radius:10px;padding:12px 10px;font-size:12.5px;font-weight:600;color:var(--dim);
+  letter-spacing:-.01em;white-space:nowrap;min-height:44px}
 .tab.on{background:var(--sand);color:var(--night)}
 .search{width:100%;margin-top:12px;background:var(--surface);border:1px solid var(--line);
   border-radius:13px;padding:11px 14px;color:var(--sand);font-size:14px}
@@ -94,7 +94,8 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .chead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
 .cname{font-size:17px;font-weight:650;line-height:1.2;letter-spacing:-.02em}
 .cmeta{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.4}
-.pill{flex:0 0 auto;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;white-space:nowrap;
+.pill{flex:0 0 auto;border-radius:999px;padding:11px 14px;font-size:11px;font-weight:700;white-space:nowrap;
+  min-height:40px;display:inline-flex;align-items:center;
   text-transform:uppercase;letter-spacing:.06em}
 .pill.sold{background:var(--mint);color:#0C2119;border:1px solid var(--mint)}
 .pill.stock{background:transparent;color:var(--teal);border:1px solid var(--teal)}
@@ -113,7 +114,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .dl .nm{font-size:14px;font-weight:600;letter-spacing:-.01em}
 .dl .dsub{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.45}
 .dl .val{font-family:var(--mono);text-align:right;white-space:nowrap;font-size:14px}
-.dl .val .s{display:block;font-size:11px;color:var(--dim);margin-top:3px}
+.dl .val .s{display:block;font-size:12px;color:var(--dim);margin-top:3px}
 .tot{display:flex;justify-content:space-between;gap:12px;margin-top:13px;padding-top:12px;
   border-top:1px solid var(--line);font-weight:650;font-size:14px}
 .tot .mono{font-size:15px}
@@ -136,7 +137,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   padding:10px;font-size:14px;font-weight:600;background:transparent}
 .cact{display:flex;justify-content:flex-end;align-items:center;gap:2px;margin-top:14px;
   border-top:1px solid var(--line);padding-top:8px}
-.cact button{font-size:12px;color:var(--dim);padding:8px 10px;border-radius:9px;font-weight:500}
+.cact button{font-size:12px;color:var(--dim);padding:12px 12px;border-radius:9px;font-weight:500;min-height:44px}
 .cact .danger{background:var(--clay);color:var(--sand);font-weight:700}
 
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:18px;padding:26px;text-align:center;margin-top:12px}
@@ -165,7 +166,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
   display:flex;align-items:center;gap:10px;padding:15px 0;margin:0 -18px;padding-left:18px;z-index:5}
 .shead .t{font-size:18px;font-weight:650;letter-spacing:-.02em}
 .back{font-size:24px;line-height:1;padding:2px 8px}
-.label{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim);margin:22px 0 8px}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim);margin:22px 0 8px}
 .in{width:100%;background:var(--night);border:1px solid var(--line);border-radius:13px;padding:13px;color:var(--sand)}
 .in.mono{font-family:var(--mono)}
 select.in{appearance:none;-webkit-appearance:none;background-image:none}
@@ -173,7 +174,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .selwrap:after{content:'▾';position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--dim);
   font-size:12px;pointer-events:none}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.pair .cap{font-size:11px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.1em}
+.pair .cap{font-size:12px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.1em}
 .hint{font-size:12px;color:var(--dim);margin-top:7px;line-height:1.5}
 .seg{display:flex;gap:4px;background:var(--night);border:1px solid var(--line);border-radius:13px;padding:4px}
 .seg button{flex:1;border-radius:10px;padding:11px;font-size:14px;font-weight:600;color:var(--dim)}
@@ -205,7 +206,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .note{font-size:12px;color:var(--dim);margin-top:11px;line-height:1.55}
 .tip{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:16px;
   font-size:13px;line-height:1.55}
-.tip .close{float:right;color:var(--dim);padding:0 0 8px 12px}
+.tip .close{float:right;color:var(--dim);padding:4px 4px 12px 16px;min-width:40px;min-height:40px;text-align:right}
 .tips{margin-top:10px}
 .tips ul{margin:8px 0 0;padding-left:18px}
 .tips li{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:4px}
@@ -213,10 +214,10 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .warn .x{float:right;color:var(--dim);padding:0 0 10px 14px;font-size:18px;line-height:1}
 .warn .go{width:100%;margin-top:12px;background:var(--azure);color:#1B1108;border-radius:12px;
   padding:12px;font-weight:700;font-size:14px}
-.metabtn{color:var(--azure);font-weight:600;font-size:12px;padding:0;text-align:right}
+.metabtn{color:var(--azure);font-weight:600;font-size:12px;padding:10px 0 10px 12px;text-align:right;min-height:40px}
 .sortrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:12px;padding:0 3px}
-.sortrow .k{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim);margin-right:2px}
-.sortbtn{color:var(--dim);font-size:12px;font-weight:600;padding:6px 11px;
+.sortrow .k{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--dim);margin-right:2px}
+.sortbtn{color:var(--dim);font-size:12px;font-weight:600;padding:11px 13px;min-height:40px;
   border:1px solid var(--line);border-radius:999px;white-space:nowrap}
 .sortbtn.on{color:var(--night);background:var(--sand);border-color:var(--sand)}
 .oudecheck{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;
@@ -263,7 +264,7 @@ button.dl{width:100%;text-align:left}
 .segsm button{flex:1;border-radius:11px;padding:11px;font-size:14px;font-weight:600;border:1px solid var(--azure);
   color:var(--azure);background:transparent}
 .segsm button.on{background:var(--azure);color:#1B1108}
-.grp{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:var(--azure);margin:26px 0 4px;font-weight:600}
+.grp{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--azure);margin:26px 0 4px;font-weight:600}
 .code{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:13px;
   padding:13px;margin-top:8px;display:block}
 .code b{font-family:var(--mono);font-size:15px;color:var(--saffron);display:block;letter-spacing:.02em}
@@ -281,7 +282,7 @@ button.dl{width:100%;text-align:left}
 .pre{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px;
   font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
   max-height:46vh;overflow:auto;margin-top:12px}
-.ver{font-size:11px;color:var(--dim);text-align:center;margin-top:26px}
+.ver{font-size:12px;color:var(--dim);text-align:center;margin-top:26px}
 
 /* ── slot ── */
 .lockscreen{position:fixed;inset:0;z-index:60;background:var(--night);display:flex;flex-direction:column;
@@ -355,7 +356,7 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='25', VERSIEDATUM='september 2026';
+var VERSIE='26', VERSIEDATUM='september 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{}};
 var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:''};
@@ -1110,17 +1111,7 @@ function render(){
 
   /* past de rij niet? Schuif het gekozen tabblad in beeld en zet de vage rand
      rechts, maar haal die weg als je aan het eind bent */
-  var tabsEl=document.getElementById('tabs'), tabsWrap=document.getElementById('tabswrap');
-  if(tabsEl&&tabsWrap&&tabsEl.scrollWidth>tabsEl.clientWidth+2){
-    var actief=tabsEl.querySelector('.tab.on');
-    if(actief)tabsEl.scrollLeft=Math.max(0,actief.offsetLeft-(tabsEl.clientWidth-actief.offsetWidth)/2);
-    var randBij=function(){
-      var meer=tabsEl.scrollLeft+tabsEl.clientWidth < tabsEl.scrollWidth-2;
-      tabsWrap.className=meer?'tabswrap meer':'tabswrap';
-    };
-    randBij();
-    tabsEl.addEventListener('scroll',randBij);
-  }
+  /* de tabbladen breken af over twee rijen, dus er valt niets meer weg te scrollen */
 
   var pf=document.getElementById('payinput');
   if(pf)pf.focus();
