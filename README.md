@@ -24,6 +24,8 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Per toestel waar je minimaal voor moet verkopen: om quitte te staan, en
   om ook naar je collega uit te komen
 - Tik op Geinvesteerd of Mijn winst voor de cijfers per telefoon
+- De winst samen staat er ook gedeeld door twee bij: op het hoofdscherm, per
+  toestel en onderaan het doorgeven-bericht
 - Hoe lang je geld al in een toestel zit, en een totaal per tabblad
 - Klanten met wat er nog open staat, en een herinnering via WhatsApp
 - Foto's per toestel, verkleind opgeslagen op je eigen telefoon
@@ -36,12 +38,20 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Een zending in een tik op verstuurd, en later in een tik op aangekomen
 - Instellingen waarschuwen als de kosten bij een toestel dubbel lijken te
   zitten, met een knop om het recht te zetten
+- Inleg: de pot van je collega houd je zelf bij; die van jou rekent de app uit
+  door het geld per dag te volgen en te kijken hoe diep de kas ooit stond.
+  Verander je iets bij hem, dan past jouw bedrag zich meteen aan, en een
+  toestel dat je van verdiend geld koopt telt niet als nieuwe inleg.
 - Inleg: twee potten, van jou en van je collega. Geld dat hij stuurt zet je
   erbij, geld dat hij uit een verkoop haalt eraf, ook met een knop op de
   kaart van dat toestel. Elke boeking kun je aan een toestel hangen, en op
   de kaart van dat toestel zie je dan terug wat eruit gehaald is. Staat los
   van de winst: inleg is kapitaal, geen verdienste. Te vinden onder
   Geïnvesteerd
+- Ben je er al uit: een klein kasboekje dat de inleg en de betalingen van
+  klanten afzet tegen wat de toestellen kostten, zodat je ziet of je inleg
+  er alweer uit is en hoeveel je erboven zit. Klopt alleen als geld dat uit
+  de handel gaat ook als opname geboekt wordt
 - Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
 - Winst per maand, boven de winst per toestel
 - Een strook bovenaan als je een week geen back-up maakte
