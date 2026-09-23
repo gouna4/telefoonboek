@@ -1,9 +1,8 @@
 {
-  "name": "Klusboek",
-  "short_name": "Klusboek",
-  "description": "Klussen, klanten en bonnetjes bijhouden",
-  "lang": "ar",
-  "dir": "rtl",
+  "name": "Telefoonboek",
+  "short_name": "Telefoonboek",
+  "description": "Inkoop en verkoop van telefoons, in euro's en dirham",
+  "lang": "nl",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
