@@ -38,15 +38,19 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   zitten, met een knop om het recht te zetten
 - Inleg: twee potten, van jou en van je collega. Geld dat hij stuurt zet je
   erbij, geld dat hij uit een verkoop haalt eraf, ook met een knop op de
-  kaart van dat toestel. Staat los van de winst: inleg is kapitaal, geen
-  verdienste. Te vinden onder Geïnvesteerd
+  kaart van dat toestel. Elke boeking kun je aan een toestel hangen, en op
+  de kaart van dat toestel zie je dan terug wat eruit gehaald is. Staat los
+  van de winst: inleg is kapitaal, geen verdienste. Te vinden onder
+  Geïnvesteerd
 - Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
 - Winst per maand, boven de winst per toestel
 - Een strook bovenaan als je een week geen back-up maakte
 - Waarschuwing als je een IMEI invoert die al in je boek staat
 - Verkochte toestellen houden de koers van hun verkoopdag, zodat oude
   winst niet verschuift als je de koers aanpast
-- Betalingen per klant, in euro of dirham, met wat er nog open staat
+- Betalingen per klant, in euro of dirham, met wat er nog open staat. Tik op
+  een bedrag om het te wijzigen: bedrag, munt en datum. Is er meer betaald
+  dan de verkoopprijs, dan waarschuwt de kaart met het verschil erbij
 - Accupercentage en IMEI
 - Controlelijst voor bij de inkoop: voor een telefoon met de testcodes per
   merk, voor een horloge een eigen lijst (loskoppelen van de vorige eigenaar,
@@ -89,6 +93,13 @@ Exporteren gaat via Instellingen -> Foto's exporteren naar een map:
 - Op een telefoon mag een website niet in een map schrijven. Daar gaan ze
   per groepje van acht naar het deelmenu; kies Opslaan in Bestanden en wijs
   daar je map aan
+
+## Wat er in de back-up zit
+
+Toestellen, zendingen, de koers, de inleg-boekingen, de controlelijst en de
+keuze van wat je doorgeeft. Voeg je in de code iets toe dat geld voorstelt,
+zet het dan in `backupText()` **en** in `zetTerug()` — anders ben je het bij
+het terugzetten kwijt.
 
 ## Nooit in deze repo
 

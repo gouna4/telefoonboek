@@ -279,6 +279,9 @@ button.dl{width:100%;text-align:left}
 .chk.pick.on .t{color:var(--sand);text-decoration:none}
 .chk.pick .n{color:var(--dim);font-size:12px;margin-left:6px}
 .count{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:16px}
+/* het bedrag van een betaling is een knop: erop tikken om hem te wijzigen */
+.payval{color:var(--sand);padding:9px 8px;border-radius:8px;border:1px solid transparent}
+.payval:active{border-color:var(--saffron)}
 /* een boeking met zijn weghaalknop eronder, samen een rij */
 .kasrij{border-bottom:1px solid var(--line)}
 .kasrij .dl{border-bottom:0;padding-bottom:2px}
@@ -360,10 +363,10 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='27', VERSIEDATUM='september 2026';
+var VERSIE='29', VERSIEDATUM='september 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[]};
-var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:'',kas:null,kasDel:''};
+var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:'',kas:null,kasDel:'',payEdit:null};
 
 function load(){
   try{
@@ -1304,11 +1307,32 @@ function card(it){
     for(var i=0;i<10;i++)h+='<span class="tile"'+(i<filled?' style="background:'+(klaar?'var(--mint)':'var(--saffron)')+'"':'')+'></span>';
     h+='</div>';
     h+='<div class="mono dim" style="font-size:12px;margin-top:9px">'+mad(paidMAD(it))+' / '+mad(toMADk(it,it.sell,it.sellCur))+' betaald</div>';
+    /* meer binnen dan de telefoon kostte: bijna altijd een typefout in een bedrag */
+    var teVeel=paidMAD(it)-toMADk(it,it.sell,it.sellCur);
+    if(teVeel>0.5){
+      h+='<div class="warn" style="margin-top:9px">Er is <b>'+mad(teVeel)+'</b> meer betaald dan de verkoopprijs. '
+       + 'Klopt een van de bedragen hieronder niet, of moet de verkoopprijs hoger? Tik op een bedrag om het aan te passen.</div>';
+    }
     if((it.payments||[]).length){
       h+='<div class="plist">';
       it.payments.forEach(function(p){
-        h+='<div class="pay"><span class="dim">'+dateNL(p.date)+'</span><span><span class="mono">'
-         + (p.cur==='MAD'?mad(p.amount):eur(p.amount))+'</span><button class="x" data-act="delpay" data-id="'+it.id+'" data-pid="'+p.id+'" aria-label="Betaling verwijderen">&times;</button></span></div>';
+        if(ui.payEdit&&ui.payEdit.id===p.id){
+          /* dezelfde betaling, maar nu om te wijzigen: bedrag, munt en datum */
+          h+='<div class="soldbox" style="border-color:var(--saffron);margin-top:8px">'
+           + '<div class="label" style="margin-top:0">Bedrag aanpassen</div>'
+           + '<div class="mini"><input id="payeditval" inputmode="decimal" value="'+esc(ui.payEdit.val||'')+'">'
+           + '<span class="cur"><button data-act="editpaycur" data-v="EUR" class="'+(ui.payEdit.cur==='EUR'?'on':'')+'">&euro;</button>'
+           + '<button data-act="editpaycur" data-v="MAD" class="'+(ui.payEdit.cur==='MAD'?'on':'')+'">DH</button></span></div>'
+           + '<div class="label">Wanneer betaald</div>'
+           + '<input class="in" type="date" id="payeditdate" value="'+esc(ui.payEdit.date||today())+'">'
+           + '<div class="mini"><button class="ok" style="flex:1" data-act="savepay" data-id="'+it.id+'">Opslaan</button>'
+           + '<button class="no" data-act="canceledit">&times;</button></div></div>';
+          return;
+        }
+        h+='<div class="pay"><span class="dim">'+dateNL(p.date)+'</span><span>'
+         + '<button class="mono payval" data-act="editpay" data-id="'+it.id+'" data-pid="'+p.id+'">'
+         + (p.cur==='MAD'?mad(p.amount):eur(p.amount))+'</button>'
+         + '<button class="x" data-act="delpay" data-id="'+it.id+'" data-pid="'+p.id+'" aria-label="Betaling verwijderen">&times;</button></span></div>';
       });
       h+='</div>';
     }
@@ -1324,6 +1348,24 @@ function card(it){
     }
     h+='</div>';
   }
+  /* Wie heeft er geld uit dit toestel gehaald, en hoeveel. Zo zie je bij het
+     toestel zelf waar het geld heen ging, niet alleen in het inleg-scherm. */
+  var uitDit=kasVanItem(it.id);
+  if(uitDit.length){
+    h+='<div class="box" style="border-color:var(--azure)"><div class="row" style="margin-top:0">'
+     + '<span style="font-weight:500;color:var(--azure)">Uit dit toestel gehaald</span>'
+     + '<span class="r"><b style="color:var(--azure)">'
+     + mad(uitDit.reduce(function(a,r){return a+Math.abs(kasMAD(r))*(r.soort==='uit'?1:0)},0))+'</b></span></div>';
+    uitDit.forEach(function(r){
+      h+='<div class="row" style="margin-top:6px"><span class="dim" style="font-size:12px">'
+       + WIENAAM[r.wie]+(r.soort==='uit'?' haalde eruit':' legde in')+' &middot; '+dateNL(r.dag)
+       + (r.note?(' &middot; '+esc(r.note)):'')+'</span>'
+       + '<span class="r dim" style="font-size:12px">'+(r.soort==='uit'?'&minus; ':'+ ')
+       + mad(Math.abs(kasMAD(r)))+' &middot; '+eur(Math.abs(kasEUR(r)))+'</span></div>';
+    });
+    h+='</div>';
+  }
+
   if(it.imei)h+='<div class="mono dim" style="font-size:11px;margin-top:12px">IMEI '+esc(it.imei)+'</div>';
   if(it.note)h+='<div class="dim" style="font-size:12px;margin-top:'+(it.imei?'5':'12')+'px">'+esc(it.note)+'</div>';
 
@@ -2428,8 +2470,15 @@ function openInleg(){
     var erin=f.soort!=='uit';
     var bijToestel=S.items.filter(function(x){return x.id===f.itemId})[0];
     h+='<div class="soldbox" style="margin-top:18px;border-color:var(--azure)">';
-    if(bijToestel)h+='<div class="hint" style="margin-top:0">Hoort bij '+esc(bijToestel.brand+' '+bijToestel.model)+'</div>';
-    h+='<div class="label" style="margin-top:12px">Van wie</div>'
+    h+='<div class="label" style="margin-top:0">Bij welk toestel</div><div class="selwrap"><select class="in" id="kasitem">'
+     + '<option value="">Geen toestel &mdash; los bedrag</option>'
+     + S.items.slice().sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''))})
+        .map(function(x){
+          return '<option value="'+x.id+'"'+(x.id===f.itemId?' selected':'')+'>'
+           + esc(x.brand+' '+x.model+(x.storage?' '+x.storage:''))+'</option>';
+        }).join('')
+     + '</select></div>';
+    h+='<div class="label">Van wie</div>'
      + '<div class="segsm"><button class="'+(f.wie==='ik'?'on':'')+'" data-act="kaswie" data-v="ik">Van mij</button>'
      + '<button class="'+(f.wie==='hij'?'on':'')+'" data-act="kaswie" data-v="hij">Van hem</button></div>'
      + '<div class="label">Wat gebeurt er</div>'
@@ -2469,13 +2518,23 @@ function openInleg(){
   document.getElementById('sheet').innerHTML=h;
 }
 
+/* wat er in de betaling getypt is bewaren voordat het scherm opnieuw tekent */
+function payEditLees(){
+  if(!ui.payEdit)return;
+  var v=document.getElementById('payeditval'), d=document.getElementById('payeditdate');
+  if(v)ui.payEdit.val=v.value;
+  if(d)ui.payEdit.date=d.value;
+}
+
 /* wat er getypt is bewaren voordat het scherm opnieuw getekend wordt */
 function kasLees(){
   if(!ui.kas)return;
   var b=document.getElementById('kasbedrag'), d=document.getElementById('kasdag'), n=document.getElementById('kasnote');
+  var t=document.getElementById('kasitem');
   if(b)ui.kas.bedrag=b.value;
   if(d)ui.kas.dag=d.value;
   if(n)ui.kas.note=n.value;
+  if(t)ui.kas.itemId=t.value;
 }
 
 /* ── controleren bij inkoop ── */
@@ -2713,12 +2772,18 @@ function zetTerug(tekst,foutmelding){
   snapshotBij(true);   /* zodat je een verkeerde terugzetting kunt terugdraaien */
   S.items=d.items;
   if(Array.isArray(d.zendingen))S.zendingen=d.zendingen;
+  if(Array.isArray(d.kas))S.kas=d.kas;
+  if(d.deel)S.deel=d.deel;
   if(d.rate)S.rate=d.rate;
   if(d.checks)S.checks=d.checks;
+  if(d.checkBrand)S.checkBrand=d.checkBrand;
+  if(d.checkSoort)S.checkSoort=d.checkSoort;
   if(d.lang)ui.lang=d.lang;
   save(); render(); openSettings();
   var m2=document.getElementById('importMsg');
-  if(m2)m2.textContent=d.items.length+' toestellen teruggezet. Kijk of je winst en je klanten er weer staan.';
+  if(m2)m2.textContent=d.items.length+' toestellen teruggezet'
+    + (Array.isArray(d.kas)&&d.kas.length?(' en '+d.kas.length+' boekingen bij Inleg'):'')
+    + '. Kijk of je winst en je klanten er weer staan.';
   return true;
 }
 
@@ -2764,7 +2829,10 @@ function openReceipt(id){
   document.getElementById('sheet').innerHTML=h;
 }
 
-function backupText(){return JSON.stringify({v:1,rate:S.rate,items:S.items,zendingen:S.zendingen})}
+/* Alles wat geld voorstelt gaat mee in de back-up. Voeg je hier iets toe,
+   zet het dan ook in zetTerug(), anders ben je het kwijt bij terugzetten. */
+function backupText(){return JSON.stringify({v:1,rate:S.rate,items:S.items,zendingen:S.zendingen,
+  kas:S.kas||[],deel:S.deel||{},checks:S.checks||{},checkBrand:S.checkBrand,checkSoort:S.checkSoort})}
 
 /* Op een iPhone-app werkt opslaan als bestand niet. Delen wel. */
 function shareBackup(btn){
@@ -3092,6 +3160,30 @@ document.addEventListener('click',function(e){
     var vc=ui.payCur||it.sellCur||'MAD';
     if(v>0){it.payments=(it.payments||[]).concat([{id:uid(),date:today(),amount:v,cur:vc}]);save()}
     ui.payFor=null;ui.payVal='';render();return;
+  }
+  if(act==='editpay'){
+    var pe=(it.payments||[]).filter(function(x){return x.id===b.dataset.pid})[0];
+    if(pe){
+      ui.payEdit={id:pe.id,val:comma(num(pe.amount),2),cur:pe.cur==='EUR'?'EUR':'MAD',date:pe.date||today()};
+      ui.payFor=null;
+    }
+    render();return;
+  }
+  if(act==='editpaycur'){payEditLees();ui.payEdit.cur=b.dataset.v==='EUR'?'EUR':'MAD';render();return}
+  if(act==='canceledit'){ui.payEdit=null;render();return}
+  if(act==='savepay'){
+    payEditLees();
+    var nv=num(ui.payEdit.val);
+    if(!(nv>0)){
+      var el3=document.getElementById('payeditval');
+      if(el3){el3.focus();el3.value=''; el3.placeholder='vul een bedrag in'}
+      return;
+    }
+    (it.payments||[]).forEach(function(x){
+      if(x.id!==ui.payEdit.id)return;
+      x.amount=nv; x.cur=ui.payEdit.cur; x.date=ui.payEdit.date||x.date;
+    });
+    ui.payEdit=null; save(); render(); return;
   }
   if(act==='delpay'){
     var pid=b.dataset.pid;
