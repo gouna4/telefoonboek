@@ -1,4 +1,4 @@
-var CACHE = 'telefoonboek-v34';
+var CACHE = 'klusboek-v29';
 var FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 var WACHT = 2000; /* zo lang wachten we op het netwerk voordat we de opgeslagen versie pakken */
 
@@ -18,7 +18,7 @@ self.addEventListener('activate', function (e) {
   );
 });
 
-/* Eerst het netwerk, zodat updates altijd doorkomen.
+/* Eerst het netwerk, zodat een nieuwe versie altijd doorkomt.
    Duurt dat langer dan twee seconden of is er geen verbinding,
    dan meteen de opgeslagen versie. */
 function uitDeKast(req) {
