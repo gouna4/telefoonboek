@@ -38,20 +38,15 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Een zending in een tik op verstuurd, en later in een tik op aangekomen
 - Instellingen waarschuwen als de kosten bij een toestel dubbel lijken te
   zitten, met een knop om het recht te zetten
-- Inleg: de pot van je collega houd je zelf bij; die van jou rekent de app uit
-  door het geld per dag te volgen en te kijken hoe diep de kas ooit stond.
-  Verander je iets bij hem, dan past jouw bedrag zich meteen aan, en een
-  toestel dat je van verdiend geld koopt telt niet als nieuwe inleg.
-- Inleg: twee potten, van jou en van je collega. Geld dat hij stuurt zet je
-  erbij, geld dat hij uit een verkoop haalt eraf, ook met een knop op de
-  kaart van dat toestel. Elke boeking kun je aan een toestel hangen, en op
-  de kaart van dat toestel zie je dan terug wat eruit gehaald is. Staat los
-  van de winst: inleg is kapitaal, geen verdienste. Te vinden onder
-  Geïnvesteerd
-- Ben je er al uit: een klein kasboekje dat de inleg en de betalingen van
-  klanten afzet tegen wat de toestellen kostten, zodat je ziet of je inleg
-  er alweer uit is en hoeveel je erboven zit. Klopt alleen als geld dat uit
-  de handel gaat ook als opname geboekt wordt
+- Inleg: wat er in je toestellen zit is samen van jullie. Wat je collega erin
+  heeft zitten vul je in; de rest is van jou en past zich meteen aan. Geld
+  dat hij stuurt zet je erbij, geld dat hij uit een verkoop haalt eraf, ook
+  met een knop op de kaart van dat toestel. Op die kaart zie je later terug
+  wat eruit gehaald is. Te vinden onder Geïnvesteerd
+- De lijst staat ingeklapt: per toestel zie je naam, stand en één bedrag — de
+  minimumprijs als je hem nog hebt, je winst als hij verkocht is, het verlies
+  als hij afgeschreven is. Tik op de naam om alles te zien. Blijft er na
+  zoeken of filteren één toestel over, dan staat die vanzelf open
 - Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
 - Winst per maand, boven de winst per toestel
 - Een strook bovenaan als je een week geen back-up maakte
