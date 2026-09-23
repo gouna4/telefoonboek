@@ -92,6 +92,14 @@ input,select,textarea{font-family:inherit;font-size:16px}
   box-shadow:0 1px 0 rgba(255,255,255,.03) inset;animation:rise .24s cubic-bezier(.2,.8,.2,1) both}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .chead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+/* de naam en de regel eronder zijn samen de knop om open te klappen */
+.cinfo{flex:1;min-width:0;text-align:left;padding:0;min-height:44px}
+.pijl{display:inline-block;color:var(--dim);margin-right:7px;transition:transform .15s;font-weight:400}
+.pijl.op{transform:rotate(90deg)}
+.csum{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;
+  font-family:var(--mono);font-size:14px;letter-spacing:-.01em;padding:11px 0 3px;min-height:44px;
+  border-top:1px solid var(--line);margin-top:-4px}
+.csum .dim{font-family:var(--sans);font-size:12px}
 .cname{font-size:17px;font-weight:650;line-height:1.2;letter-spacing:-.02em}
 .cmeta{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.4}
 .pill{flex:0 0 auto;border-radius:999px;padding:11px 14px;font-size:11px;font-weight:700;white-space:nowrap;
@@ -127,7 +135,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .tile{flex:1;height:9px;border-radius:3px;background:var(--line);transition:background .2s}
 .plist{margin-top:10px;display:flex;flex-direction:column;gap:6px}
 .pay{display:flex;align-items:center;justify-content:space-between;font-size:12px}
-.pay .x{padding:2px 6px;color:var(--dim)}
+.pay .x{padding:11px 10px;margin:-11px 0;color:var(--dim);min-width:40px;min-height:40px}
 .mini{display:flex;gap:8px;margin-top:12px}
 .mini input{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--line);border-radius:10px;
   padding:10px;color:var(--sand);font-family:var(--mono);font-size:14px}
@@ -211,7 +219,7 @@ select.in{appearance:none;-webkit-appearance:none;background-image:none}
 .tips ul{margin:8px 0 0;padding-left:18px}
 .tips li{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:4px}
 .warn{background:#2E1A14;border:1px solid var(--clay);border-radius:13px;padding:13px;margin-top:12px;font-size:14px;line-height:1.5}
-.warn .x{float:right;color:var(--dim);padding:0 0 10px 14px;font-size:18px;line-height:1}
+.warn .x{float:right;color:var(--dim);padding:2px 2px 12px 16px;font-size:18px;line-height:1;min-width:40px;min-height:40px;text-align:right}
 .warn .go{width:100%;margin-top:12px;background:var(--azure);color:#1B1108;border-radius:12px;
   padding:12px;font-weight:700;font-size:14px}
 .metabtn{color:var(--azure);font-weight:600;font-size:12px;padding:10px 0 10px 12px;text-align:right;min-height:40px}
@@ -280,7 +288,7 @@ button.dl{width:100%;text-align:left}
 .chk.pick .n{color:var(--dim);font-size:12px;margin-left:6px}
 .count{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:16px}
 /* het bedrag van een betaling is een knop: erop tikken om hem te wijzigen */
-.payval{color:var(--sand);padding:9px 8px;border-radius:8px;border:1px solid transparent}
+.payval{color:var(--sand);padding:12px 8px;min-height:40px;border-radius:8px;border:1px solid transparent}
 .payval:active{border-color:var(--saffron)}
 /* een boeking met zijn weghaalknop eronder, samen een rij */
 .kasrij{border-bottom:1px solid var(--line)}
@@ -363,10 +371,10 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='31', VERSIEDATUM='september 2026';
+var VERSIE='33', VERSIEDATUM='september 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[]};
-var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:'',kas:null,kasDel:'',payEdit:null};
+var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:'',kas:null,kasDel:'',payEdit:null,uit:{}};
 
 function load(){
   try{
@@ -959,94 +967,13 @@ function potVan(wie){
   (S.kas||[]).forEach(function(r){if(r.wie===wie)som+=kasEUR(r)});
   return som;
 }
-/* ── hoe diep heeft de kas ooit gestaan ──
-   Alle geldbewegingen op datum achter elkaar: toestellen kosten geld, klanten
-   betalen, en wat er geboekt is bij Inleg telt mee. Zakt het saldo onder nul,
-   dan moet dat gat uit je eigen zak gekomen zijn. Het diepste gat is dus wat
-   jij er zelf in gestopt hebt.
-   Koop je later een telefoon van verdiend geld, dan ga je niet dieper en
-   verandert je inleg dus niet. Dat is precies de bedoeling. */
-function kasStroom(){
-  var g=[];
-  S.items.forEach(function(it){
-    g.push({dag:it.boughtAt||it.createdAt||'', bedrag:-kostprijsEUR(it)});
-    (it.payments||[]).forEach(function(pp){
-      g.push({dag:pp.date||it.soldAt||'', bedrag:toEURk(it,pp.amount,pp.cur)});
-    });
-  });
-  (S.kas||[]).forEach(function(r){g.push({dag:r.dag||'', bedrag:kasEUR(r)})});
-  g.sort(function(a,b){return String(a.dag).localeCompare(String(b.dag))});
-  return g;
-}
-/* Per dag optellen, niet per losse boeking. Koop je vier telefoons op dezelfde
-   dag dat er ook geld binnenkomt, dan weet niemand meer wat er eerst was; door
-   per dag te rekenen hangt de uitkomst daar niet meer van af. */
-function saldoPerDag(){
-  var uit=[], dag='', som=0, saldo=0;
-  kasStroom().forEach(function(e){
-    if(e.dag!==dag){
-      if(dag){saldo+=som; uit.push({dag:dag, saldo:saldo})}
-      dag=e.dag; som=0;
-    }
-    som+=e.bedrag;
-  });
-  if(dag){saldo+=som; uit.push({dag:dag, saldo:saldo})}
-  return uit;
-}
-function diepstePuntEUR(){
-  var diepst=0;
-  saldoPerDag().forEach(function(d){if(d.saldo<diepst)diepst=d.saldo});
-  return diepst;                      /* nul of negatief */
-}
-function diepsteDag(){
-  var diepst=0, dag='';
-  saldoPerDag().forEach(function(d){if(d.saldo<diepst){diepst=d.saldo;dag=d.dag}});
-  return dag;
-}
-/* Wat jij er in totaal in gestopt hebt: wat je zelf geboekt hebt, plus het gat
-   dat daarmee nog niet gedekt is. Boek je niets, dan is het het hele gat. */
-function mijnInlegBrutoEUR(){
-  var geboekt=0;
-  (S.kas||[]).forEach(function(r){if(r.wie==='ik'&&r.soort!=='uit')geboekt+=kasEUR(r)});
-  return geboekt+Math.max(0,-diepstePuntEUR());
-}
-/* en wat daarvan nog in de handel zit, na wat je er weer uit gehaald hebt */
-function mijnInlegEUR(){
-  var eruit=0;
-  (S.kas||[]).forEach(function(r){if(r.wie==='ik'&&r.soort==='uit')eruit+=Math.abs(kasEUR(r))});
-  return mijnInlegBrutoEUR()-eruit;
-}
+/* Wat er nu in toestellen zit is samen van jullie. Wat je collega erin heeft
+   zitten vul je zelf in; de rest is van jou. Meer is het niet: geen historie,
+   geen schattingen, en het telt altijd op tot wat er in de toestellen zit. */
+function mijnInlegEUR(){return Math.max(0, totals().invest - potVan('hij'))}
 function potSamen(){return mijnInlegEUR()+potVan('hij')}
 function kasVanItem(id){return (S.kas||[]).filter(function(r){return r.itemId===id})}
 
-/* ── ben je er al uit? ──
-   Een klein kasboekje van de hele handel. Erin: wat jullie ingelegd hebben en
-   wat klanten betaald hebben. Eruit: wat de toestellen kostten en wat iemand
-   uit de pot heeft gehaald. Wat overblijft is los geld.
-   Dit klopt alleen als je geld dat je eruit haalt ook boekt als 'Eruit gehaald',
-   anders lijkt er meer over dan er is. */
-function betaaldTotaalEUR(){
-  var som=0;
-  S.items.forEach(function(it){som+=paidEUR(it)});
-  return som;
-}
-function gekochtVoorEUR(){
-  var som=0;
-  S.items.forEach(function(it){som+=kostprijsEUR(it)});
-  return som;
-}
-function opgenomenEUR(){
-  var som=0;
-  (S.kas||[]).forEach(function(r){if(r.soort==='uit')som+=Math.abs(kasEUR(r))});
-  return som;
-}
-function ingelegdBrutoEUR(){
-  var som=mijnInlegBrutoEUR();
-  (S.kas||[]).forEach(function(r){if(r.wie==='hij'&&r.soort!=='uit')som+=kasEUR(r)});
-  return som;
-}
-/* het geld dat nu niet in toestellen zit */
-function losGeldEUR(){return potSamen()+betaaldTotaalEUR()-gekochtVoorEUR()}
 var WIENAAM={ik:'Ik',hij:'Hij'};
 
 /* de twee ondergrenzen bij verkoop: die van jou, en die van het verhaal naar je collega */
@@ -1184,9 +1111,7 @@ function render(){
    + eur(t.onze/2)+'</div>'
    + (t.af>0?('<div class="s" style="color:var(--clay)">waarvan &minus; '+mad(t.afOnze*S.rate)
       +' afgeschreven ('+t.af+' '+(t.af===1?'toestel':'toestellen')+')</div>'):'')
-   + '<div class="segsm"><button class="'+(ui.lang==='ar'?'on':'')+'" data-act="lang" data-l="ar">عربي</button>'
-   + '<button class="'+(ui.lang==='nl'?'on':'')+'" data-act="lang" data-l="nl">Nederlands</button></div>'
-   + '<button class="go" data-act="share">Doorgeven via WhatsApp</button></div>'
+   + '<button class="go" data-act="share">Doorgeven &rsaquo;</button></div>'
    + '<div class="meta"><span>'+t.verkocht+' verkocht &middot; '+t.bijklant+' bij klant'+(t.af>0?(' &middot; '+t.af+' afgeschreven'):'')+'</span>'
    + (t.verkocht>0
       ? '<button class="metabtn" data-act="drill" data-k="klanten">'+(t.openMAD>0.5?('nog te krijgen '+mad(t.openMAD)):'niets openstaand')+' &rsaquo;</button>'
@@ -1215,7 +1140,7 @@ function render(){
   if(!list.length){
     h+='<div class="empty"><b>Nog geen toestellen hier</b><span>Voeg je eerste telefoon of horloge toe met de knop onderin.</span></div>';
   } else {
-    list.forEach(function(it){h+=card(it)});
+    list.forEach(function(it){h+=card(it, list.length===1)});
   }
   h+='</div>';
 
@@ -1322,19 +1247,42 @@ function tabTotaal(list){
 
 function tabBtn(k,label){return '<button class="tab'+(ui.tab===k?' on':'')+'" data-act="tab" data-k="'+k+'">'+label+'</button>'}
 
-function card(it){
+function card(it, altijdOpen){
   var inkoop=toEURk(it,it.buy,it.buyCur), verkoop=toEURk(it,it.sell,it.sellCur);
   var kost=kostenEUR(it);
   var winst=verkoop-inkoop-kost, betaald=paidEUR(it), rest=Math.max(0,verkoop-betaald);
   var pct=verkoop>0?betaald/verkoop*100:0, klaar=it.sold&&verkoop>0&&rest<0.01;
+  var open=altijdOpen||!!ui.uit[it.id];
   var h='<div class="card">';
-  h+='<div class="chead"><div><div class="cname">'+esc(it.brand)+' '+esc(it.model)+'</div><div class="cmeta">'
+  h+='<div class="chead"><button class="cinfo" data-act="uitklap" data-id="'+it.id+'">'
+   + '<div class="cname">'+(altijdOpen?'':'<span class="pijl'+(open?' op':'')+'">&rsaquo;</span>')
+   + esc(it.brand)+' '+esc(it.model)+'</div><div class="cmeta">'
    + [it.storage?esc(it.storage):'',
       it.verb?esc(it.verb):'',
       num(it.battery)>0?('accu <b style="font-weight:600;color:'+(it.battery>=90?'var(--mint)':(it.battery>=80?'var(--saffron)':'var(--clay)'))+'">'+num(it.battery)+'%</b>'):'',
       it.sold?('verkocht '+dateNL(it.soldAt)):(it.sent?('verstuurd '+dateNL(it.sentAt||it.boughtAt)):('ingekocht '+dateNL(it.boughtAt))),
       (!it.sold&&!it.off)?dagenTekst(it):''].filter(Boolean).join(' &middot; ')
-   + '</div></div><button class="pill '+({stock:'stock',sent:'sent',client:'client',paid:'sold',off:'off'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
+   + '</div></button><button class="pill '+({stock:'stock',sent:'sent',client:'client',paid:'sold',off:'off'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
+
+  /* Dicht laat de kaart alleen het cijfer zien waar je op dat moment iets aan
+     hebt: bij een verkochte telefoon je winst, bij een die je nog hebt de
+     prijs waaronder je niet moet zakken. De rest komt met een tik. */
+  if(!open){
+    var sam='', kleur='var(--sand)';
+    if(it.off){
+      sam='verlies ' + mad(kostprijsEUR(it)*kr(it)); kleur='var(--clay)';
+    } else if(it.sold){
+      sam=(winst<0?'verlies ':'winst ')+mad(Math.abs(winst)*kr(it));
+      kleur=winst>=0?'var(--mint)':'var(--clay)';
+      if(rest>0.01)sam+=' &middot; nog '+mad(restMAD(it));
+    } else {
+      sam='minimaal ' + mad(kostprijsEUR(it)*kr(it));
+    }
+    h+='<button class="csum" data-act="uitklap" data-id="'+it.id+'">'
+     + '<span style="color:'+kleur+'">'+pv(sam)+'</span>'
+     + '<span class="dim">openen &rsaquo;</span></button>';
+    return h+'</div>';
+  }
 
   var door=doorEUR(it), marge=door-inkoop, onze=verkoop-door-kost;
   h+='<div class="row"><span class="dim">Inkoop'+lock()+'</span><span class="r">'+pv(eur(inkoop)+' <span class="dim">&middot; '+mad(inkoop*kr(it))+'</span>')+'</span></div>';
@@ -2124,10 +2072,6 @@ function openDrill(k){
      + '<div class="s">'+pv(mad(mijnPot*S.rate))+'</div></div>'
      + '<div class="stat"><div class="k">Zijn inleg</div><div class="v">'+eur(zijnPot)+'</div>'
      + '<div class="s">'+mad(zijnPot*S.rate)+'</div></div></div>'
-     + (ingelegdBrutoEUR()>0.005
-        ? ('<div class="meta"><span>los geld '+pv(eur(losGeldEUR()))+'</span>'
-           + '<span>inleg open '+pv(eur(potSamen()))+'</span></div>')
-        : '')
      + '<button class="ghost" data-act="inleg">Inleg en opnames &rsaquo;</button>';
 
     var open=S.items.filter(function(x){return !x.sold&&!x.off});
@@ -2558,50 +2502,11 @@ function openInleg(){
    + '<div class="s">'+pv(mad(mijn*S.rate))+'</div></div>'
    + '<div class="stat"><div class="k">Zijn inleg</div><div class="v">'+eur(zijn)+'</div>'
    + '<div class="s">'+mad(zijn*S.rate)+'</div></div></div>';
-  if(diepstePuntEUR()<-0.005){
-    h+='<div class="hint">Je eigen inleg rekent de app zelf uit: op '+dateNL(diepsteDag())
-     + ' zat er het meeste geld tegelijk in de handel, en dat gat moest uit je eigen zak komen. '
-     + 'Verander je iets bij hem, dan past jouw bedrag zich meteen aan. Leg je extra geld in dat de app '
-     + 'niet kan zien, boek het dan gewoon als <b>Van mij</b>; het telt er dan bij op.</div>';
-  }
+
 
   var t=totals();
-  h+='<div class="meta"><span>samen ingelegd '+pv(eur(potSamen()))+'</span>'
-   + '<span>in toestellen zit '+pv(eur(t.invest))+'</span></div>';
-
-  if(ingelegdBrutoEUR()>0.005){
-    var bruto=ingelegdBrutoEUR(), terug=betaaldTotaalEUR(), gekocht=gekochtVoorEUR(),
-        eruit=opgenomenEUR(), los=losGeldEUR(), open=potSamen();
-    function kasRij(wat,bedrag,teken,kleur){
-      return '<div class="row"><span'+(kleur?' style="color:'+kleur+'"':' class="dim"')+'>'+wat+'</span>'
-       + '<span class="r"'+(kleur?' style="color:'+kleur+'"':'')+'>'+(teken||'')+pv(eur(Math.abs(bedrag)))+'</span></div>';
-    }
-    h+='<div class="label" style="margin-top:22px">Ben je er al uit?</div>'
-     + '<div class="box">'
-     + kasRij('Ingelegd',bruto,'+ ')
-     + kasRij('Betaald door klanten',terug,'+ ')
-     + kasRij('Toestellen gekocht',gekocht,'&minus; ')
-     + (eruit>0.005?kasRij('Er weer uit gehaald',eruit,'&minus; '):'')
-     + '<div class="row win"><span style="font-weight:500">Los geld nu</span>'
-     + '<span class="r"><b>'+pv(eur(los))+'</b> <span class="dim">&middot; '+pv(mad(los*S.rate))+'</span></span></div>'
-     + '<div class="row"><span class="dim">Nog in toestellen</span>'
-     + '<span class="r dim">'+pv(eur(t.invest))+'</span></div>'
-     + '</div>';
-
-    if(los>=open-0.005){
-      h+='<div class="note" style="border-color:var(--mint);color:var(--sand)">'
-       + '<b style="color:var(--mint)">Je inleg is eruit.</b> Er is '+pv(eur(los))+' aan los geld en er staat nog '
-       + pv(eur(open))+' aan inleg open, dus je kunt iedereen terugbetalen en houdt '
-       + pv(eur(los-open))+' over. Daarnaast ligt er nog voor '+pv(eur(t.invest))+' aan toestellen.</div>';
-    } else {
-      h+='<div class="note" style="border-color:var(--saffron);color:var(--sand)">'
-       + '<b style="color:var(--saffron)">Nog '+pv(eur(open-los))+' te gaan.</b> Er staat '+pv(eur(open))
-       + ' aan inleg open en er is '+pv(eur(los))+' aan los geld. Er ligt nog voor '+pv(eur(t.invest))
-       + ' aan toestellen; als die verkocht zijn komt dat erbij.</div>';
-    }
-    h+='<div class="hint">Dit klopt alleen als je geld dat uit de handel gaat ook boekt met '
-     + '<b>Eruit gehaald</b>. Neem je zelf geld mee zonder het te boeken, dan lijkt er meer over dan er is.</div>';
-  }
+  h+='<div class="hint">In je toestellen zit nu '+pv(eur(t.invest))+'. Wat je collega erin heeft zitten vul je '
+   + 'hieronder in; de rest is van jou. Verander je iets bij hem, dan past jouw bedrag zich meteen aan.</div>';
 
   if(f){
     var erin=f.soort!=='uit';
@@ -2615,12 +2520,7 @@ function openInleg(){
            + esc(x.brand+' '+x.model+(x.storage?' '+x.storage:''))+'</option>';
         }).join('')
      + '</select></div>';
-    h+=(erin?'<div class="hint" style="margin-top:14px">Je eigen inleg rekent de app zelf uit. Kies <b>Van mij</b> '
-        + 'alleen als je geld inlegt dat niet uit de verkopen komt.</div>':'')
-     + '<div class="label">Van wie</div>'
-     + '<div class="segsm"><button class="'+(f.wie==='ik'?'on':'')+'" data-act="kaswie" data-v="ik">Van mij</button>'
-     + '<button class="'+(f.wie==='hij'?'on':'')+'" data-act="kaswie" data-v="hij">Van hem</button></div>'
-     + '<div class="label">Wat gebeurt er</div>'
+    h+='<div class="label" style="margin-top:14px">Wat gebeurt er</div>'
      + '<div class="segsm"><button class="'+(erin?'on':'')+'" data-act="kassoort" data-v="in">Erin gelegd</button>'
      + '<button class="'+(erin?'':'on')+'" data-act="kassoort" data-v="uit">Eruit gehaald</button></div>'
      + '<div class="label">Bedrag</div>'
@@ -2635,8 +2535,8 @@ function openInleg(){
      + '</div>';
   } else {
     h+='<div class="mini" style="margin-top:18px">'
-     + '<button class="ghost" style="margin-top:0" data-act="kasnew" data-s="in">+ Inleg</button>'
-     + '<button class="ghost" style="margin-top:0;border-color:var(--clay);color:var(--clay)" data-act="kasnew" data-s="uit">&minus; Eruit gehaald</button>'
+     + '<button class="ghost" style="margin-top:0" data-act="kasnew" data-s="in">+ Hij legt in</button>'
+     + '<button class="ghost" style="margin-top:0;border-color:var(--clay);color:var(--clay)" data-act="kasnew" data-s="uit">&minus; Hij haalt eruit</button>'
      + '</div>';
   }
 
@@ -3051,7 +2951,7 @@ document.addEventListener('click',function(e){
   if(act==='drill'){openDrill(b.dataset.k);return}
   if(act==='inleg'){ui.kas=null;ui.kasDel='';openInleg();return}
   if(act==='kasnew'){
-    ui.kas={wie:b.dataset.s==='uit'?'hij':'ik',soort:b.dataset.s,bedrag:'',cur:'MAD',dag:today(),note:'',itemId:''};
+    ui.kas={wie:'hij',soort:b.dataset.s,bedrag:'',cur:'MAD',dag:today(),note:'',itemId:''};
     openInleg();return;
   }
   if(act==='kasuit'){
@@ -3060,7 +2960,6 @@ document.addEventListener('click',function(e){
     ui.kas={wie:'hij',soort:'uit',bedrag:'',cur:(ki&&ki.sellCur)||'MAD',dag:today(),note:'',itemId:b.dataset.id};
     ui.kasDel=''; openInleg(); return;
   }
-  if(act==='kaswie'){kasLees();ui.kas.wie=b.dataset.v;openInleg();return}
   if(act==='kassoort'){kasLees();ui.kas.soort=b.dataset.v;openInleg();return}
   if(act==='kascur'){kasLees();ui.kas.cur=b.dataset.v==='EUR'?'EUR':'MAD';openInleg();return}
   if(act==='kascancel'){ui.kas=null;openInleg();return}
@@ -3073,7 +2972,7 @@ document.addEventListener('click',function(e){
       return;
     }
     S.kas=S.kas||[];
-    S.kas.push({id:uid(),wie:ui.kas.wie,soort:ui.kas.soort==='uit'?'uit':'in',
+    S.kas.push({id:uid(),wie:'hij',soort:ui.kas.soort==='uit'?'uit':'in',
       bedrag:bed,cur:ui.kas.cur==='EUR'?'EUR':'MAD',koers:S.rate,
       dag:ui.kas.dag||today(),note:String(ui.kas.note||'').trim(),itemId:ui.kas.itemId||''});
     ui.kas=null; save(); openInleg(); render();
@@ -3265,6 +3164,12 @@ document.addEventListener('click',function(e){
   if(act==='tipoff'){ui.tipOff=true;try{localStorage.setItem(KEY+'_tip','1')}catch(err){}render();return}
   if(act==='bkoff'){ui.bkOff=true;render();return}
 
+  if(act==='uitklap'){
+    ui.uit[id]=!ui.uit[id];
+    if(!ui.uit[id])delete ui.uit[id];
+    render();
+    return;
+  }
   if(act==='toggle'){
     /* een afgeschreven toestel niet per ongeluk terugzetten: open het formulier */
     if(it.off){openForm(it);return}
