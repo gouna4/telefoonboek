@@ -67,7 +67,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
 
 /* ── de balk voor samen ── */
 .band{position:relative;overflow:hidden;background:linear-gradient(150deg,var(--surface2),var(--surface));
-  border:1px solid var(--azure);border-radius:18px;padding:16px;margin-top:12px}
+  border:1px solid var(--azure);border-radius:18px;padding:14px 16px;margin-top:12px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;text-align:left;
+  min-height:44px}
+.band .v2{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:8px;letter-spacing:-.03em;
+  color:var(--azure)}
 .band:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--azure)}
 .band .k{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--azure);font-weight:600}
 .band .v{font-family:var(--mono);font-size:24px;font-weight:600;margin-top:8px;letter-spacing:-.03em}
@@ -97,9 +101,12 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .pijl{display:inline-block;color:var(--dim);margin-right:7px;transition:transform .15s;font-weight:400}
 .pijl.op{transform:rotate(90deg)}
 .csum{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;
-  font-family:var(--mono);font-size:14px;letter-spacing:-.01em;padding:11px 0 3px;min-height:44px;
   border-top:1px solid var(--line);margin-top:-4px}
-.csum .dim{font-family:var(--sans);font-size:12px}
+.csumtxt{font-family:var(--mono);font-size:14px;letter-spacing:-.01em;padding:11px 0 3px;min-height:44px;
+  text-align:left;flex:1}
+.csumtxt.dim{font-family:var(--sans);font-size:12px;flex:0 0 auto;text-align:right}
+.csumpay{flex:0 0 auto;border:1px solid var(--teal);color:var(--teal);border-radius:10px;
+  padding:9px 12px;font-size:12px;font-weight:600;min-height:40px;margin:4px 0}
 .cname{font-size:17px;font-weight:650;line-height:1.2;letter-spacing:-.02em}
 .cmeta{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.4}
 .pill{flex:0 0 auto;border-radius:999px;padding:11px 14px;font-size:11px;font-weight:700;white-space:nowrap;
@@ -371,7 +378,7 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='33', VERSIEDATUM='september 2026';
+var VERSIE='34', VERSIEDATUM='september 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[]};
 var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:'',kas:null,kasDel:'',payEdit:null,uit:{}};
@@ -1087,7 +1094,8 @@ function render(){
 
   var h='';
   h+='<div class="top"><div class="top-in"><div><div class="title">Telefoonboek</div>'
-   + '<div class="sub">Nederland &rarr; Marokko &middot; v'+VERSIE+'</div></div>'
+   + '<div class="sub">Nederland &rarr; Marokko &middot; <b class="mono" style="color:var(--saffron);font-weight:600;white-space:nowrap">1&nbsp;&euro;&nbsp;=&nbsp;'
+   + comma(S.rate,2)+'&nbsp;DH</b> &middot; v'+VERSIE+'</div></div>'
    + '<div style="display:flex;gap:7px">'
    + '<button class="eye'+(S.hide?' on':'')+'" data-act="hide" aria-label="Bedragen verbergen">'
    + (S.hide
@@ -1095,23 +1103,26 @@ function render(){
       : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2.5 12C4 8 7.8 5.5 12 5.5S20 8 21.5 12C20 16 16.2 18.5 12 18.5S4 16 2.5 12z"/><circle cx="12" cy="12" r="2.6"/></svg>')
    + '</button>'
    + (S.pin?'<button class="icon-btn" data-act="lock" aria-label="Op slot"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4ECE0" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></button>':'')
+   + '<button class="icon-btn" data-act="zendingen" aria-label="Zendingen">'
+   + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4ECE0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v8"/></svg>'
+   + '</button>'
    + '<button class="icon-btn" data-act="settings" aria-label="Instellingen">'
    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4ECE0" stroke-width="2" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2.4" fill="#16120F"/><circle cx="16" cy="16" r="2.4" fill="#16120F"/></svg>'
    + '</button></div></div>'
-   + '<button class="board" data-act="settings"><b>1 &euro; = '+comma(S.rate,2)+' DH</b><span class="dim" style="font-size:12px">koers aanpassen</span></button>'
    + '<div class="zellige"></div></div>';
 
   h+='<div class="pad"><div class="stats">'
    + '<button class="stat" data-act="drill" data-k="winst"><div class="k">Mijn winst'+lock()+' <span style="color:var(--azure)">&rsaquo;</span></div><div class="v" style="color:'+(t.mijn>=0?'var(--mint)':'var(--clay)')+'">'+pv(eur(t.mijn))+'</div><div class="s">'+pv(mad(t.mijn*S.rate))+'</div></button>'
    + '<button class="stat" data-act="drill" data-k="invest"><div class="k">Geïnvesteerd'+lock()+' <span style="color:var(--azure)">&rsaquo;</span></div><div class="v">'+pv(eur(t.invest))+'</div><div class="s">'+(t.verstuurd>0?(t.voorraad+' hier &middot; '+t.verstuurd+' verstuurd'):(t.voorraad+' op voorraad'))+'</div></button>'
    + '</div>'
-   + '<div class="band"><div class="k">Onze winst samen</div><div class="v">'+mad(t.onze*S.rate)+'</div>'
-   + '<div class="s">'+eur(t.onze)+' &middot; gerekend met de doorgegeven prijzen, kosten eraf</div>'
-   + '<div class="s" style="color:var(--azure)">ieder de helft: <b>'+mad(t.onze*S.rate/2)+'</b> &middot; '
-   + eur(t.onze/2)+'</div>'
-   + (t.af>0?('<div class="s" style="color:var(--clay)">waarvan &minus; '+mad(t.afOnze*S.rate)
-      +' afgeschreven ('+t.af+' '+(t.af===1?'toestel':'toestellen')+')</div>'):'')
-   + '<button class="go" data-act="share">Doorgeven &rsaquo;</button></div>'
+   + '<button class="band" data-act="share">'
+   + '<div><div class="k">Onze winst samen</div><div class="v">'+mad(t.onze*S.rate)+'</div>'
+   + '<div class="s">'+eur(t.onze)+'</div></div>'
+   + '<div style="text-align:right"><div class="k">ieder de helft</div>'
+   + '<div class="v2">'+mad(t.onze*S.rate/2)+'</div>'
+   + '<div class="s">'+eur(t.onze/2)+' &middot; doorgeven &rsaquo;</div></div></button>'
+   + (t.af>0?('<div class="meta" style="color:var(--clay)"><span>&minus; '+mad(t.afOnze*S.rate)
+      +' afgeschreven ('+t.af+' '+(t.af===1?'toestel':'toestellen')+')</span><span></span></div>'):'')
    + '<div class="meta"><span>'+t.verkocht+' verkocht &middot; '+t.bijklant+' bij klant'+(t.af>0?(' &middot; '+t.af+' afgeschreven'):'')+'</span>'
    + (t.verkocht>0
       ? '<button class="metabtn" data-act="drill" data-k="klanten">'+(t.openMAD>0.5?('nog te krijgen '+mad(t.openMAD)):'niets openstaand')+' &rsaquo;</button>'
@@ -1132,9 +1143,7 @@ function render(){
   if(S.items.length>5) h+='<input class="search" id="q" placeholder="Zoek op model of klant" value="'+esc(ui.q)+'">';
   h+=tabTotaal(list);
   h+=sortRow(list);
-  if(ui.tab==='all'||ui.tab==='stock'||ui.tab==='sent'||ui.tab==='arr')
-    h+='<button class="zbtn" data-act="zendingen">Zendingen'
-     + ((S.zendingen||[]).length?(' &middot; '+(S.zendingen||[]).length):'')+' &rsaquo;</button>';
+
   h+='</div><div class="pad">';
 
   if(!list.length){
@@ -1278,9 +1287,12 @@ function card(it, altijdOpen){
     } else {
       sam='minimaal ' + mad(kostprijsEUR(it)*kr(it));
     }
-    h+='<button class="csum" data-act="uitklap" data-id="'+it.id+'">'
-     + '<span style="color:'+kleur+'">'+pv(sam)+'</span>'
-     + '<span class="dim">openen &rsaquo;</span></button>';
+    h+='<div class="csum">'
+     + '<button class="csumtxt" data-act="uitklap" data-id="'+it.id+'" style="color:'+kleur+'">'+pv(sam)+'</button>'
+     + (rest>0.01&&it.sold&&!it.off
+        ? '<button class="csumpay" data-act="snelpay" data-id="'+it.id+'">betaling +</button>'
+        : '<button class="csumtxt dim" data-act="uitklap" data-id="'+it.id+'">openen &rsaquo;</button>')
+     + '</div>';
     return h+'</div>';
   }
 
@@ -3164,6 +3176,14 @@ document.addEventListener('click',function(e){
   if(act==='tipoff'){ui.tipOff=true;try{localStorage.setItem(KEY+'_tip','1')}catch(err){}render();return}
   if(act==='bkoff'){ui.bkOff=true;render();return}
 
+  if(act==='snelpay'){
+    ui.uit[id]=true;
+    ui.payFor=id; ui.payCur=(it&&it.sellCur)||'MAD'; ui.payVal='';
+    render();
+    var inp=document.getElementById('payinput');
+    if(inp)inp.focus();
+    return;
+  }
   if(act==='uitklap'){
     ui.uit[id]=!ui.uit[id];
     if(!ui.uit[id])delete ui.uit[id];
