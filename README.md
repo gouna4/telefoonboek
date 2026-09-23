@@ -24,6 +24,8 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Per toestel waar je minimaal voor moet verkopen: om quitte te staan, en
   om ook naar je collega uit te komen
 - Tik op Geinvesteerd of Mijn winst voor de cijfers per telefoon
+- Staat er bij een verkocht toestel nog geld open, dan zit er op de
+  ingeklapte kaart een knopje om meteen een betaling te boeken
 - De winst samen staat er ook gedeeld door twee bij: op het hoofdscherm, per
   toestel en onderaan het doorgeven-bericht
 - Hoe lang je geld al in een toestel zit, en een totaal per tabblad
