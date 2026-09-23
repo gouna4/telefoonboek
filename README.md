@@ -36,6 +36,10 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 - Een zending in een tik op verstuurd, en later in een tik op aangekomen
 - Instellingen waarschuwen als de kosten bij een toestel dubbel lijken te
   zitten, met een knop om het recht te zetten
+- Inleg: twee potten, van jou en van je collega. Geld dat hij stuurt zet je
+  erbij, geld dat hij uit een verkoop haalt eraf, ook met een knop op de
+  kaart van dat toestel. Staat los van de winst: inleg is kapitaal, geen
+  verdienste. Te vinden onder Geïnvesteerd
 - Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
 - Winst per maand, boven de winst per toestel
 - Een strook bovenaan als je een week geen back-up maakte

@@ -279,6 +279,10 @@ button.dl{width:100%;text-align:left}
 .chk.pick.on .t{color:var(--sand);text-decoration:none}
 .chk.pick .n{color:var(--dim);font-size:12px;margin-left:6px}
 .count{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:16px}
+/* een boeking met zijn weghaalknop eronder, samen een rij */
+.kasrij{border-bottom:1px solid var(--line)}
+.kasrij .dl{border-bottom:0;padding-bottom:2px}
+.kasrij .weg{text-align:right;padding:0 0 10px}
 .pre{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px;
   font-family:var(--mono);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
   max-height:46vh;overflow:auto;margin-top:12px}
@@ -356,10 +360,10 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='26', VERSIEDATUM='september 2026';
+var VERSIE='27', VERSIEDATUM='september 2026';
 
-var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{}};
-var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:''};
+var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[]};
+var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',confirmDel:null,msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',dubbel:'',kas:null,kasDel:''};
 
 function load(){
   try{
@@ -380,6 +384,7 @@ function load(){
       if(Array.isArray(d.snaps))S.snaps=d.snaps;
       if(Array.isArray(d.zendingen))S.zendingen=d.zendingen;
       if(d.deel)S.deel=d.deel;
+      if(Array.isArray(d.kas))S.kas=d.kas;
     }
     ui.tipOff=localStorage.getItem(KEY+'_tip')==='1';
   }catch(e){}
@@ -409,7 +414,7 @@ function save(){
     try{
       localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
         checkBrand:S.checkBrand,checkSoort:S.checkSoort,checkAt:S.checkAt,lang:ui.lang,lastBackup:S.lastBackup,lastFoto:S.lastFoto,
-        pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen,deel:S.deel}));
+        pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen,deel:S.deel,kas:S.kas}));
       ui.msg='';return true;
     }catch(e){
       /* Geen ruimte? Dan gaan de oudste herstelpunten eraf; je eigen boek gaat voor. */
@@ -933,6 +938,28 @@ function kostprijsEUR(it){return toEURk(it,it.buy,it.buyCur)+kostenEUR(it)}
    samen af, dus je collega betaalt mee aan een scherm of een accu. */
 function doorKostEUR(it){return doorEUR(it)+kostenEUR(it)}
 
+/* ── de pot: wie heeft wat ingelegd ──
+   Jij en je collega leggen allebei geld in waar telefoons van gekocht worden.
+   Haalt een van jullie er geld uit, bijvoorbeeld uit de opbrengst van een
+   verkocht toestel, dan gaat die pot omlaag. Een boeking kan aan een toestel
+   hangen, zodat je ziet waar het geld vandaan kwam.
+   Let op: dit staat los van de winst. Inleg is geld dat je erin stopt, geen
+   verdienste, dus het telt niet mee in 'Mijn winst' of 'Onze winst samen'. */
+function kasEUR(r){
+  var b=(r.cur==='MAD')?num(r.bedrag)/(num(r.koers)||S.rate||1):num(r.bedrag);
+  return r.soort==='uit'?-b:b;
+}
+/* de koers van de dag vastzetten, net als bij een verkocht toestel */
+function kasMAD(r){return (r.cur==='MAD')?num(r.bedrag):num(r.bedrag)*(num(r.koers)||S.rate||1)}
+function potVan(wie){
+  var som=0;
+  (S.kas||[]).forEach(function(r){if(r.wie===wie)som+=kasEUR(r)});
+  return som;
+}
+function potSamen(){return potVan('ik')+potVan('hij')}
+function kasVanItem(id){return (S.kas||[]).filter(function(r){return r.itemId===id})}
+var WIENAAM={ik:'Ik',hij:'Hij'};
+
 /* de twee ondergrenzen bij verkoop: die van jou, en die van het verhaal naar je collega */
 function grenzen(it){
   var eigen=kostprijsEUR(it), samen=doorKostEUR(it);
@@ -1303,6 +1330,7 @@ function card(it){
   h+='<div class="fotorij" id="fr_'+it.id+'"><button class="fotoadd" data-act="fotoadd" data-id="'+it.id+'">+ foto</button></div>';
 
   h+='<div class="cact">';
+  if(it.sold)h+='<button data-act="kasuit" data-id="'+it.id+'">Geld eruit</button>';
   if(it.sold)h+='<button data-act="receipt" data-id="'+it.id+'" style="color:var(--azure)">Bonnetje</button>';
   h+='<button data-act="edit" data-id="'+it.id+'">Bewerken</button>';
   if(ui.confirmDel===it.id){
@@ -1957,12 +1985,21 @@ function openDrill(k){
    + '<div class="t">'+({invest:'Geïnvesteerd per telefoon',winst:'Winst per telefoon',klanten:'Wie moet nog betalen'}[k]||'Overzicht')+'</div></div>';
 
   if(k==='invest'){
+    /* Van wiens geld zijn die toestellen gekocht? Daarom staat de pot hier. */
+    var mijnPot=potVan('ik'), zijnPot=potVan('hij');
+    h+='<div class="stats" style="margin-top:4px">'
+     + '<div class="stat"><div class="k">Mijn inleg</div><div class="v">'+pv(eur(mijnPot))+'</div>'
+     + '<div class="s">'+pv(mad(mijnPot*S.rate))+'</div></div>'
+     + '<div class="stat"><div class="k">Zijn inleg</div><div class="v">'+eur(zijnPot)+'</div>'
+     + '<div class="s">'+mad(zijnPot*S.rate)+'</div></div></div>'
+     + '<button class="ghost" data-act="inleg">Inleg en opnames &rsaquo;</button>';
+
     var open=S.items.filter(function(x){return !x.sold&&!x.off});
     if(!open.length){
       h+='<div class="note">Je hebt op dit moment niets op voorraad. Alles is verkocht.</div>';
     }
-    [['stock','Hier op voorraad'],['sent','Onderweg naar Marokko']].forEach(function(soort){
-      var deel=open.filter(function(x){return soort[0]==='sent'?!!x.sent:!x.sent})
+    [['stock','Hier op voorraad'],['sent','Onderweg naar Marokko'],['arr','Aangekomen in Marokko']].forEach(function(soort){
+      var deel=open.filter(function(x){return statusOf(x)===soort[0]})
         .sort(function(a,b){return kostprijsEUR(b)-kostprijsEUR(a)});
       if(!deel.length)return;
       h+='<div class="label">'+soort[1]+'</div>';
@@ -2356,6 +2393,91 @@ function openShare(){
   document.getElementById('sheet').innerHTML=h;
 }
 
+/* ── inleg en opnames ── */
+function kasRegel(r){
+  var it=S.items.filter(function(x){return x.id===r.itemId})[0];
+  var erin=r.soort!=='uit';
+  var sub=[dateNL(r.dag)];
+  if(it)sub.push(esc(it.brand+' '+it.model));
+  if(r.note)sub.push(esc(r.note));
+  return '<div class="kasrij"><div class="dl"><div><div class="nm">'+WIENAAM[r.wie]+(erin?' legde in':' haalde eruit')+'</div>'
+   + '<div class="dsub">'+sub.join(' &middot; ')+'</div></div>'
+   + '<div class="val"><b style="color:'+(erin?'var(--mint)':'var(--clay)')+'">'
+   + (erin?'+ ':'&minus; ')+mad(kasMAD(r))+'</b>'
+   + '<span class="s">'+eur(Math.abs(kasEUR(r)))+'</span></div></div>'
+   + '<div class="weg"><button class="sortbtn" data-act="kasdel" data-k="'+r.id+'">'
+   + (ui.kasDel===r.id?'zeker weg?':'weghalen')+'</button></div></div>';
+}
+
+function openInleg(){
+  var mijn=potVan('ik'), zijn=potVan('hij'), f=ui.kas;
+  var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
+   + '<div class="t">Inleg</div></div>';
+
+  h+='<div class="stats" style="margin-top:16px">'
+   + '<div class="stat"><div class="k">Mijn inleg</div><div class="v">'+pv(eur(mijn))+'</div>'
+   + '<div class="s">'+pv(mad(mijn*S.rate))+'</div></div>'
+   + '<div class="stat"><div class="k">Zijn inleg</div><div class="v">'+eur(zijn)+'</div>'
+   + '<div class="s">'+mad(zijn*S.rate)+'</div></div></div>';
+
+  var t=totals();
+  h+='<div class="meta"><span>samen ingelegd '+pv(eur(potSamen()))+'</span>'
+   + '<span>in toestellen zit '+pv(eur(t.invest))+'</span></div>';
+
+  if(f){
+    var erin=f.soort!=='uit';
+    var bijToestel=S.items.filter(function(x){return x.id===f.itemId})[0];
+    h+='<div class="soldbox" style="margin-top:18px;border-color:var(--azure)">';
+    if(bijToestel)h+='<div class="hint" style="margin-top:0">Hoort bij '+esc(bijToestel.brand+' '+bijToestel.model)+'</div>';
+    h+='<div class="label" style="margin-top:12px">Van wie</div>'
+     + '<div class="segsm"><button class="'+(f.wie==='ik'?'on':'')+'" data-act="kaswie" data-v="ik">Van mij</button>'
+     + '<button class="'+(f.wie==='hij'?'on':'')+'" data-act="kaswie" data-v="hij">Van hem</button></div>'
+     + '<div class="label">Wat gebeurt er</div>'
+     + '<div class="segsm"><button class="'+(erin?'on':'')+'" data-act="kassoort" data-v="in">Erin gelegd</button>'
+     + '<button class="'+(erin?'':'on')+'" data-act="kassoort" data-v="uit">Eruit gehaald</button></div>'
+     + '<div class="label">Bedrag</div>'
+     + '<div class="mini"><input id="kasbedrag" inputmode="decimal" placeholder="0" value="'+esc(f.bedrag||'')+'">'
+     + '<span class="cur"><button data-act="kascur" data-v="EUR" class="'+(f.cur==='EUR'?'on':'')+'">&euro;</button>'
+     + '<button data-act="kascur" data-v="MAD" class="'+(f.cur==='MAD'?'on':'')+'">DH</button></span></div>'
+     + '<div class="label">Wanneer</div><input class="in" type="date" id="kasdag" value="'+esc(f.dag||today())+'">'
+     + '<div class="label">Waarvoor</div>'
+     + '<input class="in" id="kasnote" placeholder="bv. via Western Union" value="'+esc(f.note||'')+'">'
+     + '<div class="mini" style="margin-top:14px"><button class="ok" style="flex:1" data-act="kassave">Opslaan</button>'
+     + '<button class="no" data-act="kascancel">&times;</button></div>'
+     + '</div>';
+  } else {
+    h+='<div class="mini" style="margin-top:18px">'
+     + '<button class="ghost" style="margin-top:0" data-act="kasnew" data-s="in">+ Inleg</button>'
+     + '<button class="ghost" style="margin-top:0;border-color:var(--clay);color:var(--clay)" data-act="kasnew" data-s="uit">&minus; Eruit gehaald</button>'
+     + '</div>';
+  }
+
+  var lijst=(S.kas||[]).slice().sort(function(a,b){return String(b.dag).localeCompare(String(a.dag))});
+  if(!lijst.length){
+    h+='<div class="note">Nog niets geboekt. Stuurt hij geld waar je telefoons van koopt, zet het er dan bij met '
+     + '<b>+ Inleg</b>. Haalt hij geld uit een verkoop, dan zet je dat erbij met <b>Eruit gehaald</b> &mdash; '
+     + 'dat kan ook met de knop <b>Geld eruit</b> op de kaart van dat toestel.</div>';
+  } else {
+    h+='<div class="label">Alle boekingen</div>';
+    lijst.forEach(function(r){h+=kasRegel(r)});
+  }
+
+  h+='<div class="note">Inleg is geld dat je erin stopt, geen winst. Het telt dus niet mee in Mijn winst of in '
+   + 'Onze winst samen. Zo zie je apart hoeveel van jouw eigen geld er nog in de handel zit, en hoeveel van hem.</div>';
+
+  h+='</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
+  document.getElementById('sheet').innerHTML=h;
+}
+
+/* wat er getypt is bewaren voordat het scherm opnieuw getekend wordt */
+function kasLees(){
+  if(!ui.kas)return;
+  var b=document.getElementById('kasbedrag'), d=document.getElementById('kasdag'), n=document.getElementById('kasnote');
+  if(b)ui.kas.bedrag=b.value;
+  if(d)ui.kas.dag=d.value;
+  if(n)ui.kas.note=n.value;
+}
+
 /* ── controleren bij inkoop ── */
 var CODES={
  'iPhone':{
@@ -2720,6 +2842,43 @@ document.addEventListener('click',function(e){
   }
   if(act==='settings'){openSettings();return}
   if(act==='drill'){openDrill(b.dataset.k);return}
+  if(act==='inleg'){ui.kas=null;ui.kasDel='';openInleg();return}
+  if(act==='kasnew'){
+    ui.kas={wie:b.dataset.s==='uit'?'hij':'ik',soort:b.dataset.s,bedrag:'',cur:'MAD',dag:today(),note:'',itemId:''};
+    openInleg();return;
+  }
+  if(act==='kasuit'){
+    /* geld dat iemand uit de opbrengst van dit toestel haalt */
+    var ki=S.items.filter(function(x){return x.id===b.dataset.id})[0];
+    ui.kas={wie:'hij',soort:'uit',bedrag:'',cur:(ki&&ki.sellCur)||'MAD',dag:today(),note:'',itemId:b.dataset.id};
+    ui.kasDel=''; openInleg(); return;
+  }
+  if(act==='kaswie'){kasLees();ui.kas.wie=b.dataset.v;openInleg();return}
+  if(act==='kassoort'){kasLees();ui.kas.soort=b.dataset.v;openInleg();return}
+  if(act==='kascur'){kasLees();ui.kas.cur=b.dataset.v==='EUR'?'EUR':'MAD';openInleg();return}
+  if(act==='kascancel'){ui.kas=null;openInleg();return}
+  if(act==='kassave'){
+    kasLees();
+    var bed=num(ui.kas.bedrag);
+    if(!(bed>0)){
+      var inp=document.getElementById('kasbedrag');
+      if(inp){inp.focus();inp.placeholder='vul eerst een bedrag in'}
+      return;
+    }
+    S.kas=S.kas||[];
+    S.kas.push({id:uid(),wie:ui.kas.wie,soort:ui.kas.soort==='uit'?'uit':'in',
+      bedrag:bed,cur:ui.kas.cur==='EUR'?'EUR':'MAD',koers:S.rate,
+      dag:ui.kas.dag||today(),note:String(ui.kas.note||'').trim(),itemId:ui.kas.itemId||''});
+    ui.kas=null; save(); openInleg(); render();
+    return;
+  }
+  if(act==='kasdel'){
+    var kid=b.dataset.k;
+    if(ui.kasDel!==kid){ui.kasDel=kid;openInleg();return}
+    S.kas=(S.kas||[]).filter(function(r){return r.id!==kid});
+    ui.kasDel=''; save(); openInleg(); render();
+    return;
+  }
   if(act==='zendingen'){ui.zdel='';openZendingen();return}
   if(act==='zopen'){ui.zdel='';openZending(b.dataset.z);return}
   if(act==='znew'){
