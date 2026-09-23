@@ -1,64 +1,69 @@
-# Klusboek
+# Telefoonboek
 
-Klussen, bonnetjes en facturen bijhouden voor een klusjesman.
+Boekhouding voor het in- en verkopen van telefoons en horloges:
+Nederland → Marokko.
+Rekent euro's en dirham automatisch naar elkaar om.
 
 **Geen server, geen account, geen internet nodig.** Wat je invult blijft in de
 opslag van de browser op je eigen toestel en wordt nergens naartoe gestuurd.
 Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
 
-De app staat standaard in het Arabisch. Met de knop rechtsboven (`NL` / `ع`)
-wissel je naar het Nederlands en terug.
-
-## Hoe het in elkaar zit
-
-Zo eenvoudig als het kan:
-
-    een KLANT heeft KLUSSEN
-    een klus is af of niet, en heeft een bedrag, bonnetjes en foto's
-    wat af is en nog niet op een factuur staat, zet je op een FACTUUR
-    op die factuur komen de betalingen
-
-Een bedrag staat op precies twee plekken: **bij de klus** (je arbeid) en **op
-het bonnetje** (je materiaal). Er is geen tweede bedrag dat daaroverheen gaat,
-dus een totaal is altijd gewoon de optelsom.
-
-Bij een klant zie je drie groepen die de app zelf maakt:
-
-    Nog te doen                     wat er nog ligt
-    Klaar, nog niet gefactureerd    wat je kunt versturen
-    Facturen                        wat je verstuurd hebt
-
-Een factuur is een momentopname: de klussen met hun bedrag en het materiaal bij
-elkaar. Pas je later een klus aan, dan blijft de factuur zoals je hem stuurde.
-Verwijder je een factuur, dan komen die klussen terug in de middelste groep.
-
 ## Wat het bijhoudt
 
-- Klanten met telefoonnummer, plaats en een notitie
-- Klussen met een datum, een omschrijving en je arbeidsbedrag
-- Een klus is af of niet; de app onthoudt op welke dag je hem afvinkte
-- Tot zes foto's van het werk per klus
-- Materialen als lijst, met een foto van het bonnetje per regel
-- Facturen met hun betalingen, ook in delen. Betaal je meer dan er op staat,
-  dan heet dat *Vooruitbetaald*
-- Dirham of euro als hoofdmunt, met een instelbare koers; per bedrag kies je DH of €
-- Het overzicht naar de klant sturen via WhatsApp of het deelmenu, of afdrukken
-  en als PDF bewaren
-- Vijf cijfers bovenaan, allemaal aan te tikken om te zien waar ze vandaan komen:
-  nog factureren, wacht op betaling, deze maand binnen, werk in de planning,
-  en dit jaar
-- Maand voor maand terugkijken: wat je afrondde en wat er binnenkwam
-- **Lijst plakken**: plak een lijstje uit de groepsapp en elke regel wordt een klus
-- Soorten werk als knopjes onder het invulveld, met een plusje om er zelf een
-  bij te zetten
-- Zoeken door alles heen: klanten, klussen en facturen
-- Een klus kopiëren, en een klus naar een andere klant verplaatsen door in het
-  formulier een andere klant te kiezen
-- Terugvegen gaat één scherm terug in plaats van de app te sluiten
-- Een strook bovenaan als een factuur langer dan een maand wacht, of als je twee
-  weken geen back-up maakte
-- Een knop om alle bedragen te verbergen, en een cijferslot van vier cijfers
-- Back-up maken en terugzetten, en vijf herstelpunten op het toestel zelf
+- Inkoop en verkoop per toestel, in euro's en dirham, met een instelbare koers
+- Telefoon of horloge per toestel: eigen merken en modellen, en bij een
+  horloge de kastmaat en of er 4G in zit in plaats van opslag
+- Een tweede, doorgegeven inkoopprijs, zodat je eigen marge privé blijft
+- Kosten als onderdelen, transport en zending gaan van jouw winst af en ook
+  van de winst samen; in het doorgeven-bericht zitten ze in het inkoopbedrag,
+  dus je collega ziet per toestel één bedrag
+- Kosten voor transport, en vervangen onderdelen als lijst: per onderdeel
+  een naam en een bedrag, met een plusje voor de volgende
+- Zes standen: op voorraad, onderweg naar Marokko, aangekomen in Marokko, bij klant
+  (verkocht maar niet afbetaald), betaald, afgeschreven
+- Per toestel waar je minimaal voor moet verkopen: om quitte te staan, en
+  om ook naar je collega uit te komen
+- Tik op Geinvesteerd of Mijn winst voor de cijfers per telefoon
+- Staat er bij een verkocht toestel nog geld open, dan zit er op de
+  ingeklapte kaart een knopje om meteen een betaling te boeken
+- De winst samen staat er ook gedeeld door twee bij: op het hoofdscherm, per
+  toestel en onderaan het doorgeven-bericht
+- Hoe lang je geld al in een toestel zit, en een totaal per tabblad
+- Klanten met wat er nog open staat, en een herinnering via WhatsApp
+- Foto's per toestel, verkleind opgeslagen op je eigen telefoon
+- Wat je eerder voor hetzelfde model kreeg, bij het invoeren en op de kaart
+- Zendingen: een pakket naar Marokko met verzendkosten die zich gelijk
+  verdelen over de toestellen erin, en in een tik allemaal op verstuurd
+- Bij doorgeven kies je met vinkjes welke groepen meegaan: verkocht, op
+  voorraad, onderweg, aangekomen of afgeschreven; de winst samen rekent
+  alleen over de groepen die je meestuurt
+- Een zending in een tik op verstuurd, en later in een tik op aangekomen
+- Instellingen waarschuwen als de kosten bij een toestel dubbel lijken te
+  zitten, met een knop om het recht te zetten
+- Inleg: wat er in je toestellen zit is samen van jullie. Wat je collega erin
+  heeft zitten vul je in; de rest is van jou en past zich meteen aan. Geld
+  dat hij stuurt zet je erbij, geld dat hij uit een verkoop haalt eraf, ook
+  met een knop op de kaart van dat toestel. Op die kaart zie je later terug
+  wat eruit gehaald is. Te vinden onder Geïnvesteerd
+- De lijst staat ingeklapt: per toestel zie je naam, stand en één bedrag — de
+  minimumprijs als je hem nog hebt, je winst als hij verkocht is, het verlies
+  als hij afgeschreven is. Tik op de naam om alles te zien. Blijft er na
+  zoeken of filteren één toestel over, dan staat die vanzelf open
+- Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
+- Winst per maand, boven de winst per toestel
+- Een strook bovenaan als je een week geen back-up maakte
+- Waarschuwing als je een IMEI invoert die al in je boek staat
+- Verkochte toestellen houden de koers van hun verkoopdag, zodat oude
+  winst niet verschuift als je de koers aanpast
+- Betalingen per klant, in euro of dirham, met wat er nog open staat. Tik op
+  een bedrag om het te wijzigen: bedrag, munt en datum. Is er meer betaald
+  dan de verkoopprijs, dan waarschuwt de kaart met het verschil erbij
+- Accupercentage en IMEI
+- Controlelijst voor bij de inkoop: voor een telefoon met de testcodes per
+  merk, voor een horloge een eigen lijst (loskoppelen van de vorige eigenaar,
+  glas, band, accu, 4G of GPS)
+- Bonnetje voor de klant en een overzicht voor je collega, in het Arabisch
+- Cijferslot en een knop om alle privébedragen te verbergen
 
 ## Bestanden
 
@@ -72,39 +77,41 @@ Verwijder je een factuur, dan komen die klussen terug in de middelste groep.
 
 Verhoog het nummer op twee plekken, anders zie je je eigen wijziging niet:
 
-1. `index.html` — `var VERSIE='29'` bovenaan het script
-2. `sw.js` — `klusboek-v29`
+1. `index.html` — `var VERSIE='21'` bovenaan het script
+2. `sw.js` — `telefoonboek-v21`
 
-Het nummer verschijnt vanzelf onder de titel en onderaan de instellingen.
+De kop en de regel onderaan de instellingen halen het nummer daar zelf op.
 
-## Van een ouder boek naar deze versie
+## Foto's
 
-Tot versie 28 hingen klussen aan een **opdracht**, en het geld ook. Die laag is
-weg. `uitOpdrachten()` zet een ouder boek om zodra je het opent of terugzet:
-
-- elke klus gaat naar de klant van zijn opdracht
-- elke opdracht waar geld in omging of die verstuurd was, wordt een factuur met
-  de klussen die er klaar in stonden
-- de rest worden gewone klussen bij de klant
-
-Dat gebeurt één keer en wordt meteen bewaard.
-
-## Bonnetjes en foto's
-
-Het boek zelf staat in `localStorage` en die lade is maar zo'n 5 MB groot: daar
-past geen foto in. Foto's gaan daarom in IndexedDB, een tweede lade op het
+Foto's staan niet in `localStorage` maar in IndexedDB, een tweede lade op het
 toestel die voor bestanden bedoeld is. Ze worden bij het toevoegen verkleind
-naar ongeveer 1500 pixels en opnieuw opgeslagen als JPEG, zo'n 200 KB per stuk.
+naar ongeveer 1400 pixels en opnieuw opgeslagen als JPEG, zo'n 200 KB per stuk.
+Maximaal vier per toestel.
 
 **Ze zitten niet in het back-upbestand.** Dat is tekst; een foto niet. Een
-back-up terugzetten geeft je je boek terug, niet je foto's. Wil je er een
-bewaren, tik hem dan aan en gebruik Sturen.
+back-up terugzetten geeft je je boek terug, niet je foto's.
+
+Exporteren gaat via Instellingen -> Foto's exporteren naar een map:
+
+- Op een computer (Chrome, Edge) schrijft de app rechtstreeks in een map
+  die je aanwijst, met een naam per toestel zoals
+  `iPhone-12-128GB-Youssef-2026-08-20-1.jpg`
+- Op een telefoon mag een website niet in een map schrijven. Daar gaan ze
+  per groepje van acht naar het deelmenu; kies Opslaan in Bestanden en wijs
+  daar je map aan
+
+## Wat er in de back-up zit
+
+Toestellen, zendingen, de koers, de inleg-boekingen, de controlelijst en de
+keuze van wat je doorgeeft. Voeg je in de code iets toe dat geld voorstelt,
+zet het dan in `backupText()` **en** in `zetTerug()` — anders ben je het bij
+het terugzetten kwijt.
 
 ## Nooit in deze repo
 
-Het back-upbestand uit de instellingen (`klusboek-JJJJ-MM-DD-uummss.json`).
-Daarin staan klantnamen, telefoonnummers en bedragen. `.gitignore` houdt ze
-tegen, maar kijk voor het uploaden of er niets tussen zit.
+Het back-upbestand uit de instellingen (`telefoonboek-JJJJ-MM-DD.json`).
+Daarin staan klantnamen, echte inkoopprijzen en openstaande bedragen.
 
 ## Let op
 
