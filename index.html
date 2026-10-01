@@ -304,6 +304,14 @@ button.dl{width:100%;text-align:left}
 .chk.pick.on .t{color:var(--sand);text-decoration:none}
 .chk.pick .n{color:var(--dim);font-size:12px;margin-left:6px}
 .count{font-family:var(--mono);font-size:13px;color:var(--dim);margin-top:16px}
+/* uitklapbare koppen in de instellingen */
+.seckop{display:flex;align-items:center;gap:10px;width:100%;background:none;color:var(--sand);
+  border:1px solid var(--line);border-radius:13px;padding:14px 15px;margin-top:11px;min-height:52px}
+.seckop.aan{background:var(--surface)}
+.seckop .sp{font-size:12px;color:var(--dim);width:11px;flex:none}
+.seckop .sn{flex:1;min-width:0;text-align:left;font-weight:650;font-size:15px;letter-spacing:-.01em}
+.seckop .sb{font-family:var(--mono);font-size:13px;color:var(--dim);flex:none}
+.secin{padding:2px 2px 6px}
 /* het vraagvenster: donkere laag met een kaartje erop */
 .vraagbg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60}
 .vraagbox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:61;width:min(340px,calc(100vw - 36px));
@@ -399,10 +407,10 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='36', VERSIEDATUM='oktober 2026';
+var VERSIE='37', VERSIEDATUM='oktober 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[]};
-var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',kas:null,kasDel:'',payEdit:null,uit:{},stilOff:false,dubbel:'',zoekOpen:false};
+var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',kas:null,kasDel:'',payEdit:null,uit:{},stilOff:false,dubbel:'',zoekOpen:false,sec:{}};
 
 function load(){
   try{
@@ -2320,98 +2328,128 @@ function openDrill(k){
   toonSheet(h);
 }
 
+/* De instellingen waren een lap van begin tot eind. Nu staan de onderdelen
+   achter een kop die je open- en dichtklapt, zoals in de klusboek. Alleen de
+   koers staat er altijd uit: die kijk je het vaakst na en pas je het snelst aan. */
+function secRij(sleutel,naam,extra,kleur){
+  var aan=!!ui.sec[sleutel];
+  return '<button class="seckop'+(aan?' aan':'')+'" data-act="sec" data-v="'+sleutel+'">'
+   + '<span class="sp">'+(aan?'&#9662;':'&#9656;')+'</span>'
+   + '<span class="sn">'+esc(naam)+'</span>'
+   + (extra?('<span class="sb"'+(kleur?' style="color:'+kleur+'"':'')+'>'+extra+'</span>'):'')
+   + '</button>';
+}
+
 function openSettings(){
   var t=totals();
+  var verdacht=dubbelVerdacht();
+  if(verdacht.length&&ui.sec.dubbel===undefined)ui.sec.dubbel=true;   /* een waarschuwing staat open */
+
   var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
    + '<div class="t">Instellingen</div></div>'
    + '<div class="label">Wisselkoers</div>'
-   + '<div style="display:flex;align-items:center;gap:10px"><span class="mono dim">1 &euro; =</span>'
+   + '<div style="display:flex;align-items:center;gap:10px"><span class="mono dim" style="white-space:nowrap">1 &euro; =</span>'
    + '<input class="in mono" id="s_rate" inputmode="decimal" value="'+comma(S.rate,2)+'"><span class="mono dim">DH</span></div>'
    + '<button class="outline quiet" data-act="rate1030">Terug naar 10,30</button>'
    + '<div class="note">Bedragen blijven staan in de valuta waarin je ze invulde. Alleen de omrekening volgt deze koers. '
    + 'Verkochte toestellen houden de koers van hun eigen verkoopdag, zodat je oude winst niet verschuift.</div>'
-   + (function(){
-       var v=dubbelVerdacht();
-       if(!v.length)return '';
-       var uit='<div class="divider"></div><div class="label">Kosten misschien dubbel</div>'
-        + '<div class="note">Bij ' + (v.length===1?'dit toestel':('deze '+v.length+' toestellen'))
-        + ' ligt de doorgegeven inkoop precies de kosten boven je echte inkoop. Heb je die er toen zelf '
-        + 'bij opgeteld? Dan zitten ze er nu twee keer in, want de app rekent ze er al af. '
-        + 'Tik op een toestel om de kosten uit de doorgegeven prijs te halen.</div>';
-       v.forEach(function(r){
-         uit+='<button class="dl" data-act="dubbelfix" data-id="'+r.it.id+'">'
-          + '<div><div class="nm">'+esc(r.it.brand)+' '+esc(r.it.model)+'</div>'
-          + '<div class="dsub">kosten '+eur(r.kost)+' &middot; doorgegeven ligt '+eur(r.extra)+' boven je inkoop</div></div>'
-          + '<div class="val"><span class="dim" style="font-size:12px">'
-          + (ui.dubbel===r.it.id?'zeker?':'rechtzetten')+'</span></div></button>';
-       });
-       uit+='<div class="hint">Klopt het wel en wil je dat je collega extra meebetaalt? Laat het dan staan; '
-        + 'dit lijstje verdwijnt zodra het verschil niet meer gelijk is aan de kosten.</div>';
-       return uit;
-     })()
-   + '<div class="divider"></div>'
-   + '<button class="outline quiet" data-act="uitleg">Hoe de cijfers werken &rsaquo;</button>'
-   + '<div class="divider"></div>'
-   + '<div class="label">Jouw boek</div>'
-   + '<div class="mono dim" style="font-size:14px">'+S.items.length+' toestellen &middot; '+t.verkocht+' verkocht &middot; winst '+eur(t.mijn)+'</div>'
-   + (function(){
-       if(!S.lastBackup)return '<div class="hint" style="color:var(--saffron);margin-top:10px">Je hebt nog nooit een back-up gemaakt.</div>';
-       var dagen=Math.floor((new Date()-new Date(S.lastBackup))/86400000);
-       var oud=dagen>14;
-       return '<div class="hint" style="margin-top:10px'+(oud?';color:var(--saffron)':'')+'">Laatste back-up: '+dateNL(S.lastBackup)
-         + (dagen>0?(' — '+dagen+' dagen geleden'):' — vandaag')+(oud?'. Tijd voor een nieuwe.':'')+'</div>';
-     })()
-   + '<button class="outline" data-act="sharebackup">Back-up versturen of opslaan</button>'
-   + '<button class="outline quiet" data-act="copy" id="copyBtn">Kopiëren naar klembord</button>'
-   + '<button class="outline quiet" data-act="showbackup">Tekst op het scherm zetten</button>'
-   + '<div id="backupBox"></div>'
-   + '<div class="note">Je gegevens staan in deze app op dit toestel. Maak af en toe een back-up, dan kun je alles terugzetten of naar je andere telefoon overzetten.</div>'
-   + '<div class="label">Back-up terugzetten</div>'
-   + '<button class="outline" data-act="pickfile">Back-upbestand kiezen</button>'
-   + '<input type="file" id="s_file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'
-   + '<div class="hint">Zie je je bestand niet? Tik onderin op <b>Zoek</b> en typ <b>telefoonboek</b> in het zoekvak. '
-   + 'Of kijk bij <b>Op mijn iPhone</b> &rarr; <b>Downloads</b>.</div>'
-   + (function(){
-       var s=S.snaps||[];
-       if(!s.length) return '<div class="label">Herstelpunten in de app</div>'
-         + '<div class="hint" style="margin-top:0">Zodra je iets wijzigt bewaart de app hier zelf de vorige stand. Dan kun je terug zonder bestanden.</div>';
-       var u='<div class="label">Herstelpunten in de app</div>'
-         + '<div class="hint" style="margin-top:0">De app bewaart elke dag de stand van daarvoor. Eén tik en je bent terug.</div>';
-       s.forEach(function(p,i){
-         u+='<div class="r" style="display:flex;align-items:center;justify-content:space-between;gap:10px;'
-          + 'border-bottom:1px solid var(--line);padding:11px 0">'
-          + '<div><div class="nm" style="font-size:14px">'+dateNL(new Date(p.at).toISOString().slice(0,10))+'</div>'
-          + '<div class="ds mono" style="font-size:12px;color:var(--dim)">'+p.n+' toestellen</div></div>'
-          + '<button class="text-btn" data-act="snapback" data-i="'+i+'" style="color:var(--azure);font-weight:600;font-size:13px;padding:8px 4px">Terugzetten</button>'
-          + '</div>';
-       });
-       u+='<div class="hint">Deze punten staan op dit toestel. Raak je je telefoon kwijt, dan helpt alleen een back-upbestand.</div>';
-       return u;
-     })()
-   + '<div class="hint" style="margin-top:14px">Of plak de tekst van je back-up:</div>'
-   + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px;margin-top:6px"></textarea>'
-   + '<button class="outline quiet" data-act="import">Terugzetten (overschrijft dit boek)</button>'
-   + '<div class="note" id="importMsg"></div>'
-   + '<div class="divider"></div>'
-   + '<div class="label">Foto\'s</div>'
-   + '<div class="mono dim" id="s_fotos" style="font-size:14px">even kijken&hellip;</div>'
-   + '<button class="outline" data-act="fotoexport">Foto\'s exporteren naar een map</button>'
-   + '<button class="outline quiet" data-act="fotokeep">Vraag je telefoon deze gegevens te bewaren</button>'
-   + '<div class="hint">Foto\'s staan in een aparte lade op dit toestel. Ze passen <b>niet</b> in je '
-   + 'back-upbestand, want dat is tekst. Wil je een foto zeker houden, stuur hem dan ook naar jezelf '
-   + 'met de knop Sturen bij de foto.</div>'
-   + '<div class="divider"></div>'
-   + '<div class="label">Slot op de app</div>'
-   + (S.pin
-      ? '<div class="hint" style="margin-top:0">De app vraagt om je code bij het openen. Met het oog bovenin kun je losse bedragen verbergen zonder de app te sluiten.</div>'
-        + '<button class="outline quiet" data-act="setpin">Code wijzigen</button>'
-        + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
-      : '<div class="hint" style="margin-top:0">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
-        + '<button class="outline" data-act="setpin">Code instellen</button>')
-   + '<div class="ver">Telefoonboek versie '+VERSIE+' &middot; '+VERSIEDATUM+'</div>'
+   + '<button class="outline quiet" style="margin-top:14px" data-act="uitleg">Hoe de cijfers werken &rsaquo;</button>';
+
+  /* ── kosten misschien dubbel ── */
+  if(verdacht.length){
+    h+=secRij('dubbel','Kosten misschien dubbel',verdacht.length+' toestel'+(verdacht.length===1?'':'len'),'var(--saffron)');
+    if(ui.sec.dubbel){
+      h+='<div class="secin">'
+       + '<div class="note" style="margin-top:8px">Bij ' + (verdacht.length===1?'dit toestel':('deze '+verdacht.length+' toestellen'))
+       + ' ligt de doorgegeven inkoop precies de kosten boven je echte inkoop. Heb je die er toen zelf '
+       + 'bij opgeteld? Dan zitten ze er nu twee keer in, want de app rekent ze er al af. '
+       + 'Tik op een toestel om de kosten uit de doorgegeven prijs te halen.</div>';
+      verdacht.forEach(function(r){
+        h+='<button class="dl" data-act="dubbelfix" data-id="'+r.it.id+'">'
+         + '<div><div class="nm">'+esc(r.it.brand)+' '+esc(r.it.model)+'</div>'
+         + '<div class="dsub">kosten '+eur(r.kost)+' &middot; doorgegeven ligt '+eur(r.extra)+' boven je inkoop</div></div>'
+         + '<div class="val"><span class="dim" style="font-size:12px">'
+         + (ui.dubbel===r.it.id?'zeker?':'rechtzetten')+'</span></div></button>';
+      });
+      h+='<div class="hint">Klopt het wel en wil je dat je collega extra meebetaalt? Laat het dan staan; '
+       + 'dit lijstje verdwijnt zodra het verschil niet meer gelijk is aan de kosten.</div></div>';
+    }
+  }
+
+  /* ── back-up en terugzetten ── */
+  var bkExtra='nog nooit', bkKleur='var(--saffron)';
+  if(S.lastBackup){
+    var dgn=Math.floor((new Date()-new Date(S.lastBackup))/86400000);
+    bkExtra=dgn>0?(dgn+' dagen geleden'):'vandaag';
+    bkKleur=dgn>14?'var(--saffron)':'';
+  }
+  h+=secRij('back','Back-up en terugzetten',bkExtra,bkKleur);
+  if(ui.sec.back){
+    h+='<div class="secin">'
+     + '<div class="mono dim" style="font-size:14px;margin-top:10px">'+S.items.length+' toestellen &middot; '+t.verkocht+' verkocht &middot; winst '+eur(t.mijn)+'</div>'
+     + '<button class="outline" data-act="sharebackup">Back-up versturen of opslaan</button>'
+     + '<button class="outline quiet" data-act="copy" id="copyBtn">Kopi&euml;ren naar klembord</button>'
+     + '<button class="outline quiet" data-act="showbackup">Tekst op het scherm zetten</button>'
+     + '<div id="backupBox"></div>'
+     + '<div class="note">Je gegevens staan in deze app op dit toestel. Maak af en toe een back-up, dan kun je alles terugzetten of naar je andere telefoon overzetten.</div>'
+     + '<div class="label">Back-up terugzetten</div>'
+     + '<button class="outline" data-act="pickfile">Back-upbestand kiezen</button>'
+     + '<input type="file" id="s_file" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">'
+     + '<div class="hint">Zie je je bestand niet? Tik onderin op <b>Zoek</b> en typ <b>telefoonboek</b> in het zoekvak. '
+     + 'Of kijk bij <b>Op mijn iPhone</b> &rarr; <b>Downloads</b>.</div>'
+     + (function(){
+         var sn=S.snaps||[];
+         if(!sn.length) return '<div class="label">Herstelpunten in de app</div>'
+           + '<div class="hint" style="margin-top:0">Zodra je iets wijzigt bewaart de app hier zelf de vorige stand. Dan kun je terug zonder bestanden.</div>';
+         var u='<div class="label">Herstelpunten in de app</div>'
+           + '<div class="hint" style="margin-top:0">De app bewaart elke dag de stand van daarvoor. E&eacute;n tik en je bent terug.</div>';
+         sn.forEach(function(pp,i){
+           u+='<div class="r" style="display:flex;align-items:center;justify-content:space-between;gap:10px;'
+            + 'border-bottom:1px solid var(--line);padding:11px 0">'
+            + '<div><div class="nm" style="font-size:14px">'+dateNL(new Date(pp.at).toISOString().slice(0,10))+'</div>'
+            + '<div class="ds mono" style="font-size:12px;color:var(--dim)">'+pp.n+' toestellen</div></div>'
+            + '<button class="text-btn" data-act="snapback" data-i="'+i+'" style="color:var(--azure);font-weight:600;font-size:13px;padding:8px 4px">Terugzetten</button>'
+            + '</div>';
+         });
+         u+='<div class="hint">Deze punten staan op dit toestel. Raak je je telefoon kwijt, dan helpt alleen een back-upbestand.</div>';
+         return u;
+       })()
+     + '<div class="hint" style="margin-top:14px">Of plak de tekst van je back-up:</div>'
+     + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px;margin-top:6px"></textarea>'
+     + '<button class="outline quiet" data-act="import">Terugzetten (overschrijft dit boek)</button>'
+     + '<div class="note" id="importMsg"></div></div>';
+  }
+
+  /* ── foto's ── */
+  h+=secRij('fotos','Foto&#39;s','','');
+  if(ui.sec.fotos){
+    h+='<div class="secin">'
+     + '<div class="mono dim" id="s_fotos" style="font-size:14px;margin-top:10px">even kijken&hellip;</div>'
+     + '<button class="outline" data-act="fotoexport">Foto&#39;s exporteren naar een map</button>'
+     + '<button class="outline quiet" data-act="fotokeep">Vraag je telefoon deze gegevens te bewaren</button>'
+     + '<div class="hint">Foto&#39;s staan in een aparte lade op dit toestel. Ze passen <b>niet</b> in je '
+     + 'back-upbestand, want dat is tekst. Wil je een foto zeker houden, stuur hem dan ook naar jezelf '
+     + 'met de knop Sturen bij de foto.</div></div>';
+  }
+
+  /* ── slot ── */
+  h+=secRij('slot','Slot op de app',S.pin?'aan':'uit',S.pin?'var(--mint)':'');
+  if(ui.sec.slot){
+    h+='<div class="secin">'
+     + (S.pin
+        ? '<div class="hint">De app vraagt om je code bij het openen. Met het oog bovenin kun je losse bedragen verbergen zonder de app te sluiten.</div>'
+          + '<button class="outline quiet" data-act="setpin">Code wijzigen</button>'
+          + '<button class="outline quiet" data-act="offpin">Slot uitzetten</button>'
+        : '<div class="hint">Vier cijfers bij het openen. Maak eerst een back-up: raak je je code kwijt, dan is dat je enige weg terug.</div>'
+          + '<button class="outline" data-act="setpin">Code instellen</button>')
+     + '</div>';
+  }
+
+  h+='<div class="ver">Telefoonboek versie '+VERSIE+' &middot; '+VERSIEDATUM+'</div>'
    + '</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   toonSheet(h);
-  document.getElementById('s_rate').addEventListener('input',function(){
+  var rEl=document.getElementById('s_rate');
+  if(rEl)rEl.addEventListener('input',function(){
     var n=num(this.value); if(n>0){S.rate=n;save()}
   });
 
@@ -2437,7 +2475,8 @@ function openSettings(){
       }
     }catch(e){}
   });
-  document.getElementById('s_file').addEventListener('change',function(){
+  var fEl=document.getElementById('s_file');
+  if(fEl)fEl.addEventListener('change',function(){
     var f=this.files&&this.files[0];
     if(!f)return;
     var msg=document.getElementById('importMsg');
@@ -3256,6 +3295,7 @@ document.addEventListener('click',function(e){
   if(act==='share'){openShare();return}
   if(act==='check'){openCheck();return}
   if(act==='uitleg'){openUitleg();return}
+  if(act==='sec'){ui.sec[b.dataset.v]=!ui.sec[b.dataset.v];openSettings();return}
   if(act==='zoekaan'){
     ui.zoekOpen=!ui.zoekOpen;
     if(!ui.zoekOpen)ui.q='';

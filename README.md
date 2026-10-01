@@ -55,6 +55,9 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   stilstaat: toestellen die 60 dagen of langer liggen en klanten die 30 dagen
   of langer niet betalen, allebei met een tik erheen
 - Terugvegen of de terugknop sluit het bovenste scherm, niet de hele app
+- De instellingen staan achter uitklapbare koppen: back-up, foto's en het
+  slot. Alleen de wisselkoers staat er altijd uit. De app onthoudt wat je
+  open had staan, en een waarschuwing klapt vanzelf open
 - Zoeken zit achter een vergrootglas in de kop, zodat het zoekvak niet altijd
   ruimte kost; hij verschijnt pas vanaf zes toestellen
 - Onderaan een opengeklapt toestel staan vijf iconen met een woord eronder:
