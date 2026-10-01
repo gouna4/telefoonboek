@@ -51,7 +51,19 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   zoeken of filteren één toestel over, dan staat die vanzelf open
 - Sorteren op nieuwste, langst op voorraad of meeste geld dat vastzit
 - Winst per maand, boven de winst per toestel
-- Een strook bovenaan als je een week geen back-up maakte
+- Een strook bovenaan als je een week geen back-up maakte, en een als er geld
+  stilstaat: toestellen die 60 dagen of langer liggen en klanten die 30 dagen
+  of langer niet betalen, allebei met een tik erheen
+- Terugvegen of de terugknop sluit het bovenste scherm, niet de hele app
+- Zoeken zit achter een vergrootglas in de kop, zodat het zoekvak niet altijd
+  ruimte kost; hij verschijnt pas vanaf zes toestellen
+- Onderaan een opengeklapt toestel staan vijf iconen met een woord eronder:
+  geld eruit, bonnetje, zelfde erbij, bewerken en weggooien
+- Weggooien vraagt eerst, met een venster dat zegt wat er meegaat
+- „Nog een zelfde” maakt een kopie van een toestel met alles al ingevuld,
+  behalve IMEI, accu en alles wat met verkopen te maken heeft
+- Een uitlegscherm in de instellingen: hoe inkoop, doorgegeven prijs, kosten
+  en de twee winsten samenhangen, met een voorbeeld
 - Waarschuwing als je een IMEI invoert die al in je boek staat
 - Verkochte toestellen houden de koers van hun verkoopdag, zodat oude
   winst niet verschuift als je de koers aanpast
