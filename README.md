@@ -71,7 +71,13 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   behalve IMEI, accu en alles wat met verkopen te maken heeft
 - Een uitlegscherm in de instellingen: hoe inkoop, doorgegeven prijs, kosten
   en de twee winsten samenhangen, met een voorbeeld
+- Snel toevoegen: de knop onderin opent een kort scherm met vier dingen —
+  telefoon of horloge, merk, type en wat je betaalde. Drie knoppen met een
+  icoon: opslaan, opslaan en nog een, of meer invullen. De rest vul je later
+  aan met Bewerken
 - Waarschuwing als je een IMEI invoert die al in je boek staat
+- Een toestel op verkocht zetten kan niet zonder verkoopprijs: zonder prijs
+  zou de app hem als volledig betaald zien en je hele inkoop als verlies boeken
 - Verkochte toestellen houden de koers van hun verkoopdag, zodat oude
   winst niet verschuift als je de koers aanpast
 - Betalingen per klant, in euro of dirham, met wat er nog open staat. Tik op
