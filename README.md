@@ -19,6 +19,10 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   dus je collega ziet per toestel één bedrag
 - Kosten voor transport, en vervangen onderdelen als lijst: per onderdeel
   een naam en een bedrag, met een plusje voor de volgende
+- Besproken: een toestel beloven aan een klant zonder het te verkopen. Je legt
+  de naam en de afgesproken prijs vast; hij blijft in je voorraad staan, want
+  je geld zit er nog in en het risico ook. Geef je hem af, dan wordt het in
+  één tik een verkoop met klant en prijs al ingevuld
 - Zes standen: op voorraad, onderweg naar Marokko, aangekomen in Marokko, bij klant
   (verkocht maar niet afbetaald), betaald, afgeschreven
 - Per toestel waar je minimaal voor moet verkopen: om quitte te staan, en

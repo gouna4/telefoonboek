@@ -407,10 +407,10 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='37', VERSIEDATUM='oktober 2026';
+var VERSIE='38', VERSIEDATUM='oktober 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[]};
-var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',kas:null,kasDel:'',payEdit:null,uit:{},stilOff:false,dubbel:'',zoekOpen:false,sec:{}};
+var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',kas:null,kasDel:'',payEdit:null,uit:{},stilOff:false,dubbel:'',zoekOpen:false,sec:{},resFor:null,resNaam:'',resVal:'',resCur:'MAD'};
 
 function load(){
   try{
@@ -1051,6 +1051,18 @@ function dagenTekst(it){
   return n+' '+(n===1?'dag':'dagen')+' '+(aangekomen?'in Marokko':(it.sent?'onderweg':'op voorraad'));
 }
 
+/* ── besproken ──
+   Een toestel kan beloofd zijn aan een klant zonder dat het verkocht is: hij
+   heeft hem nog niet in handen en er is nog niets betaald. Dan is het geld nog
+   van jou en het risico ook, dus hij blijft gewoon in je voorraad staan. Wel
+   zie je voor wie hij is en voor welke prijs, zodat je hem niet twee keer
+   belooft en niet hoeft te onthouden wat je afsprak. */
+function isBesproken(it){
+  return !it.sold && !it.off && (String(it.resKlant||'').trim()!=='' || num(it.resPrijs)>0);
+}
+function resEUR(it){return toEURk(it,it.resPrijs,it.resCur||'MAD')}
+function besprokenLijst(){return S.items.filter(isBesproken)}
+
 function statusOf(it){
   if(it.off)return 'off';
   /* verstuurd en al aangekomen is een eigen stand: het toestel ligt in Marokko
@@ -1135,7 +1147,7 @@ function render(){
     .filter(function(it){
       var q=ui.q.trim().toLowerCase();
       if(!q)return true;
-      return [it.brand,it.model,it.storage,it.verb,it.customer,it.note,it.imei,soortNaam(soortVan(it))]
+      return [it.brand,it.model,it.storage,it.verb,it.customer,it.resKlant,it.note,it.imei,soortNaam(soortVan(it))]
         .join(' ').toLowerCase().indexOf(q)>-1;
     })
     .sort(sorteer);
@@ -1324,6 +1336,9 @@ function backupWaarschuwing(){
 function tabTotaal(list){
   if(!list.length)return '';
   var n=list.length, links=n+' '+(n===1?'toestel':'toestellen'), rechts='';
+  var besp=besprokenLijst().length;
+  if(besp&&(ui.tab==='all'||ui.tab==='stock'||ui.tab==='sent'||ui.tab==='arr'))
+    links+=' &middot; <span style="color:var(--saffron)">'+besp+' besproken</span>';
   if(ui.tab==='client'){
     var open=0;
     list.forEach(function(it){open+=restMAD(it)});
@@ -1361,7 +1376,7 @@ function card(it, altijdOpen){
       num(it.battery)>0?('accu <b style="font-weight:600;color:'+(it.battery>=90?'var(--mint)':(it.battery>=80?'var(--saffron)':'var(--clay)'))+'">'+num(it.battery)+'%</b>'):'',
       it.sold?('verkocht '+dateNL(it.soldAt)):(it.sent?('verstuurd '+dateNL(it.sentAt||it.boughtAt)):('ingekocht '+dateNL(it.boughtAt))),
       (!it.sold&&!it.off)?dagenTekst(it):''].filter(Boolean).join(' &middot; ')
-   + '</div></button><button class="pill '+({stock:'stock',sent:'sent',client:'client',paid:'sold',off:'off'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
+   + '</div></button><button class="pill '+({stock:'stock',sent:'sent',arr:'arr',client:'client',paid:'sold',off:'off'})[statusOf(it)]+'" data-act="toggle" data-id="'+it.id+'">'+STATUSLABEL[statusOf(it)]+'</button></div>';
 
   /* Dicht laat de kaart alleen het cijfer zien waar je op dat moment iets aan
      hebt: bij een verkochte telefoon je winst, bij een die je nog hebt de
@@ -1374,6 +1389,10 @@ function card(it, altijdOpen){
       sam=(winst<0?'verlies ':'winst ')+mad(Math.abs(winst)*kr(it));
       kleur=winst>=0?'var(--mint)':'var(--clay)';
       if(rest>0.01)sam+=' &middot; nog '+mad(restMAD(it));
+    } else if(isBesproken(it)){
+      sam='besproken'+(String(it.resKlant||'').trim()?(' voor '+it.resKlant):'')
+        +(num(it.resPrijs)>0?(' &middot; '+mad(toMADk(it,it.resPrijs,it.resCur||'MAD'))):'');
+      kleur='var(--saffron)';
     } else {
       sam='minimaal ' + mad(kostprijsEUR(it)*kr(it));
     }
@@ -1402,6 +1421,22 @@ function card(it, altijdOpen){
     h+='<div class="row"><span class="dim">Kosten'+lock()+'</span><span class="r">'+pv(eur(kost)+' <span class="dim">&middot; '+mad(kost*kr(it))+'</span>')+'</span></div>';
     if(!S.hide)h+='<div class="row" style="margin-top:3px"><span class="dim" style="font-size:12px">'+deel.join(' &middot; ')+'</span><span></span></div>';
   }
+  if(isBesproken(it)){
+    h+='<div class="box" style="border-color:var(--saffron)"><div class="row" style="margin-top:0">'
+     + '<span style="font-weight:500;color:var(--saffron)">Besproken'
+     + (String(it.resKlant||'').trim()?(' voor '+esc(it.resKlant)):'')+'</span>'
+     + '<span class="r"><b style="color:var(--saffron)">'
+     + (num(it.resPrijs)>0?mad(toMADk(it,it.resPrijs,it.resCur||'MAD')):'prijs nog niet af')+'</b></span></div>'
+     + (num(it.resPrijs)>0
+        ? ('<div class="row" style="margin-top:4px"><span class="dim" style="font-size:12px">'
+           + (it.resDag?('afgesproken '+dateNL(it.resDag)+' &middot; '):'')+'hij heeft hem nog niet</span>'
+           + '<span class="r dim" style="font-size:12px">'+eur(resEUR(it))+'</span></div>')
+        : '')
+     + '<div class="mini"><button class="ok" style="flex:1" data-act="afgegeven" data-id="'+it.id+'">Afgegeven</button>'
+     + '<button class="no" data-act="reswis" data-id="'+it.id+'">Toch niet</button></div>'
+     + '</div>';
+  }
+
   if(!it.sold&&!it.off){
     /* waar de verkoop minimaal op uit moet komen */
     var g=grenzen(it);
@@ -1504,6 +1539,26 @@ function card(it, altijdOpen){
        + mad(Math.abs(kasMAD(r)))+' &middot; '+eur(Math.abs(kasEUR(r)))+'</span></div>';
     });
     h+='</div>';
+  }
+
+  if(!it.sold&&!it.off&&!isBesproken(it)){
+    if(ui.resFor===it.id){
+      var rc=ui.resCur||it.sellCur||'MAD';
+      h+='<div class="soldbox" style="border-color:var(--saffron);margin-top:14px">'
+       + '<div class="label" style="margin-top:0">Voor wie is hij</div>'
+       + '<input class="in" id="resnaam" placeholder="naam van de klant" value="'+esc(ui.resNaam||'')+'">'
+       + '<div class="label">Afgesproken prijs</div>'
+       + '<div class="mini"><input id="resprijs" inputmode="decimal" placeholder="0" value="'+esc(ui.resVal||'')+'">'
+       + '<span class="cur"><button data-act="rescur" data-v="EUR" class="'+(rc==='EUR'?'on':'')+'">&euro;</button>'
+       + '<button data-act="rescur" data-v="MAD" class="'+(rc==='MAD'?'on':'')+'">DH</button></span></div>'
+       + '<div class="mini"><button class="ok" style="flex:1" data-act="resok" data-id="'+it.id+'">Vastleggen</button>'
+       + '<button class="no" data-act="resnee">&times;</button></div>'
+       + '<div class="hint">Hij blijft gewoon in je voorraad staan: je geld zit er nog in en het risico ook. '
+       + 'Pas als je hem afgeeft wordt het een verkoop.</div></div>';
+    } else {
+      h+='<button class="ghost" style="border-color:var(--saffron);color:var(--saffron)" '
+       + 'data-act="resaan" data-id="'+it.id+'">Besproken voor een klant</button>';
+    }
   }
 
   if(it.imei)h+='<div class="mono dim" style="font-size:11px;margin-top:12px">IMEI '+esc(it.imei)+'</div>';
@@ -3429,6 +3484,53 @@ document.addEventListener('click',function(e){
     render();
     return;
   }
+  if(act==='resaan'){
+    ui.resFor=id; ui.resNaam=''; ui.resVal=''; ui.resCur=(it&&it.sellCur)||'MAD';
+    ui.uit[id]=true; render();
+    var rn=document.getElementById('resnaam'); if(rn)rn.focus();
+    return;
+  }
+  if(act==='rescur'){
+    var rv=document.getElementById('resprijs'), rn2=document.getElementById('resnaam');
+    if(rv)ui.resVal=rv.value;
+    if(rn2)ui.resNaam=rn2.value;
+    ui.resCur=b.dataset.v==='EUR'?'EUR':'MAD'; render();
+    return;
+  }
+  if(act==='resnee'){ui.resFor=null;ui.resNaam='';ui.resVal='';render();return}
+  if(act==='resok'){
+    var rv2=document.getElementById('resprijs'), rn3=document.getElementById('resnaam');
+    var naam=rn3?String(rn3.value||'').trim():'';
+    var prijs=rv2?num(rv2.value):0;
+    if(!naam&&!(prijs>0)){
+      if(rn3){rn3.focus();rn3.placeholder='vul een naam of een prijs in'}
+      return;
+    }
+    it.resKlant=naam; it.resPrijs=prijs; it.resCur=ui.resCur==='EUR'?'EUR':'MAD'; it.resDag=today();
+    ui.resFor=null; ui.resNaam=''; ui.resVal='';
+    save(); render();
+    return;
+  }
+  if(act==='reswis'){
+    it.resKlant=''; it.resPrijs=0; it.resDag='';
+    save(); render();
+    return;
+  }
+  if(act==='afgegeven'){
+    /* nu pas is het een verkoop: de klant heeft hem in handen */
+    if(!(num(it.resPrijs)>0)){openForm(it); setStatusSeg('sold'); return}
+    it.sell=num(it.resPrijs); it.sellCur=it.resCur==='EUR'?'EUR':'MAD';
+    if(String(it.resKlant||'').trim())it.customer=it.resKlant;
+    it.sold=true; it.soldAt=today(); it.sent=false;
+    if(!num(it.rate))it.rate=S.rate;
+    if(!num(it.costZ)){
+      var zd2=zendingDeelEUR(it);
+      if(zd2>0.005)it.costZ=zd2;
+    }
+    it.resKlant=''; it.resPrijs=0; it.resDag='';
+    save(); render();
+    return;
+  }
   if(act==='toggle'){
     /* een afgeschreven toestel niet per ongeluk terugzetten: open het formulier */
     if(it.off){openForm(it);return}
@@ -3436,6 +3538,12 @@ document.addEventListener('click',function(e){
     if(!it.sold&&!it.sent){it.sent=true; it.sentAt=today(); save();render();return}
     if(!it.sold&&!it.arr){it.arr=true; it.arrAt=today(); save();render();return}
     if(!it.sold){
+      /* staat er al een afgesproken prijs, gebruik die dan */
+      if(!num(it.sell)&&num(it.resPrijs)>0){
+        it.sell=num(it.resPrijs); it.sellCur=it.resCur==='EUR'?'EUR':'MAD';
+        if(String(it.resKlant||'').trim())it.customer=it.resKlant;
+        it.resKlant=''; it.resPrijs=0; it.resDag='';
+      }
       if(!num(it.sell)){openForm(it); setStatusSeg('sold'); return}
       it.sold=true; it.soldAt=today(); it.sent=false;
       if(!num(it.rate))it.rate=S.rate;   /* koers van vandaag vastzetten */
