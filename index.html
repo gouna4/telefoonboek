@@ -314,6 +314,9 @@ button.dl{width:100%;text-align:left}
   border:1px solid var(--line);border-radius:13px;padding:14px;font-size:15px;font-weight:600;
   color:var(--sand);min-height:52px}
 .snelknop.ja{background:var(--mint);border-color:var(--mint);color:#0C2119;font-weight:700}
+/* het plusje naast Type, om zelf een model bij te zetten */
+.plusje{display:inline-flex;align-items:center;gap:4px;float:right;color:var(--azure);
+  font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;padding:0 0 6px 10px;min-height:28px}
 /* het vraagvenster: donkere laag met een kaartje erop */
 .vraagbg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60}
 .vraagbox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:61;width:min(340px,calc(100vw - 36px));
@@ -402,16 +405,49 @@ var VERBINDING=['GPS','GPS + 4G'];
 
 /* alles wat per soort verschilt op een plek */
 function soortVan(it){return (it&&it.soort==='wat')?'wat':'tel'}
-function merkenVan(srt){return srt==='wat'?WATCHES:CATALOG}
+/* De vaste lijst loopt tot de modellen van nu. Komt er een nieuwe uit, dan
+   voeg je die zelf toe met het plusje naast Type; hij komt in je eigen boek
+   te staan en gaat dus mee in je back-up. Zo hoef je niet te wachten op een
+   nieuwe versie van de app. */
+function eigenVan(srt){
+  S.eigen=S.eigen||{};
+  S.eigen[srt]=S.eigen[srt]||{};
+  return S.eigen[srt];
+}
+function merkenVan(srt){
+  var vast=srt==='wat'?WATCHES:CATALOG, eigen=eigenVan(srt), uit={};
+  Object.keys(vast).forEach(function(m){
+    if(m==='Anders')return;                 /* Anders houden we achteraan */
+    uit[m]=(vast[m]||[]).concat(eigen[m]||[]);
+  });
+  Object.keys(eigen).forEach(function(m){
+    if(!uit[m]&&m!=='Anders')uit[m]=eigen[m].slice();
+  });
+  uit['Anders']=[];
+  return uit;
+}
+/* een model dat nog niet in de lijst staat erbij zetten */
+function eigenErbij(srt,merk,model){
+  merk=String(merk||'').trim(); model=String(model||'').trim();
+  if(!merk||!model)return false;
+  var vast=srt==='wat'?WATCHES:CATALOG;
+  if((vast[merk]||[]).indexOf(model)>-1)return false;      /* zat er al in */
+  var e=eigenVan(srt);
+  e[merk]=e[merk]||[];
+  if(e[merk].indexOf(model)>-1)return false;
+  e[merk].push(model);
+  save();
+  return true;
+}
 function matenVan(srt){return srt==='wat'?MATEN:STORAGES}
 function maatLabel(srt){return srt==='wat'?'Maat':'Opslag'}
 function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='40', VERSIEDATUM='oktober 2026';
+var VERSIE='42', VERSIEDATUM='november 2026';
 
-var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[]};
+var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[],eigen:{}};
 var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',kas:null,kasDel:'',payEdit:null,uit:{},stilOff:false,dubbel:'',zoekOpen:false,sec:{},resFor:null,resNaam:'',resVal:'',resCur:'MAD'};
 
 function load(){
@@ -434,6 +470,7 @@ function load(){
       if(Array.isArray(d.zendingen))S.zendingen=d.zendingen;
       if(d.deel)S.deel=d.deel;
       if(Array.isArray(d.kas))S.kas=d.kas;
+      if(d.eigen)S.eigen=d.eigen;
     }
     ui.tipOff=localStorage.getItem(KEY+'_tip')==='1';
   }catch(e){}
@@ -441,7 +478,9 @@ function load(){
 /* Voordat er iets verandert: bewaar de stand die er nu staat als herstelpunt.
    Eén per dag, maximaal vijf. Zo kun je altijd terug zonder met bestanden te
    hoeven slepen. Let op: dit staat op dit toestel — het vervangt een echte
-   back-up niet als je je telefoon kwijtraakt. */
+   back-up niet als je je telefoon kwijtraakt.
+   Sinds v42 gaan ook de inleg en opnames (kas), de doorgeef-keuze (deel) en
+   je eigen modellen mee; daarvoor bleef de inleg bij terugzetten staan. */
 function snapshotBij(altijd){
   try{
     var raw=localStorage.getItem(KEY);
@@ -452,7 +491,8 @@ function snapshotBij(altijd){
     var dag=today();
     if(!altijd && S.snaps.length && S.snaps[0].dag===dag) return;
     S.snaps.unshift({dag:dag, at:Date.now(), n:d.items.length,
-      data:JSON.stringify({v:1,rate:d.rate,items:d.items,zendingen:d.zendingen})});
+      data:JSON.stringify({v:1,rate:d.rate,items:d.items,zendingen:d.zendingen,
+        kas:d.kas||[],deel:d.deel||{},eigen:d.eigen||{}})});
     S.snaps=S.snaps.slice(0,5);
   }catch(e){}
 }
@@ -463,7 +503,7 @@ function save(){
     try{
       localStorage.setItem(KEY,JSON.stringify({v:1,rate:S.rate,items:S.items,checks:S.checks,
         checkBrand:S.checkBrand,checkSoort:S.checkSoort,checkAt:S.checkAt,lang:ui.lang,lastBackup:S.lastBackup,lastFoto:S.lastFoto,
-        pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen,deel:S.deel,kas:S.kas}));
+        pin:S.pin,hide:S.hide,snaps:S.snaps,zendingen:S.zendingen,deel:S.deel,kas:S.kas,eigen:S.eigen}));
       ui.msg='';return true;
     }catch(e){
       /* Geen ruimte? Dan gaan de oudste herstelpunten eraf; je eigen boek gaat voor. */
@@ -1671,8 +1711,11 @@ function snelTekenType(){
        bijna nooit wat je bedoelt, dus we kiezen een bekend recent model */
     var voorkeur={'iPhone':'13 Pro Max','Apple Watch':'Series 9'}[sel.value];
     var kies=(voorkeur&&arr.indexOf(voorkeur)>-1)?voorkeur:arr[arr.length-1];
-    slot.innerHTML='<div class="label">Type</div><div class="selwrap"><select class="in" id="snel_model">'
-     + options(arr,kies||'')+'</select></div>';
+    slot.innerHTML='<div class="label">Type <button class="plusje" data-act="modelplus" data-waar="snel">'
+     + ico('plus',14)+' nieuw model</button></div>'
+     + '<div class="selwrap"><select class="in" id="snel_model">'
+     + options(arr,kies||'')+'</select></div>'
+     + '<div id="snel_nieuw"></div>';
   }
 }
 function snelTekenMaat(){
@@ -1691,6 +1734,7 @@ function snelBewaar(){
     var bv=document.getElementById('snel_brandvrij'), mv=document.getElementById('snel_modelvrij');
     merk=(bv&&bv.value.trim())||'Anders';
     model=mv?mv.value.trim():'';
+    if(merk!=='Anders'&&model)eigenErbij(snelSoort,merk,model);
   } else {
     var ms=document.getElementById('snel_model');
     model=ms?ms.value:'';
@@ -1894,7 +1938,10 @@ function openForm(item){
     } else {
       var arr=merkenVan(formSoort)[b]||[];
       var cur=(arr.indexOf(model)>-1)?model:arr[0];
-      slot.innerHTML='<div class="label">Type</div><div class="selwrap"><select class="in" id="f_model">'+options(arr,cur)+'</select></div>';
+      slot.innerHTML='<div class="label">Type <button class="plusje" data-act="modelplus" data-waar="form">'
+       + ico('plus',14)+' nieuw model</button></div>'
+       + '<div class="selwrap"><select class="in" id="f_model">'+options(arr,cur)+'</select></div>'
+       + '<div id="f_nieuw"></div>';
     }
     /* wat dit model je eerder opbracht, meteen bijwerken */
     var ms=document.getElementById('f_model');
@@ -2075,6 +2122,9 @@ function savePhone(){
   var mSel=document.getElementById('f_model');
   var finalBrand=brand==='Anders'?((bFree&&bFree.value.trim())||'Anders'):brand;
   var finalModel=brand==='Anders'?(mFree?mFree.value.trim():''):(mSel?mSel.value:'');
+  /* typ je een merk en type dat er nog niet in staat, dan onthouden we het,
+     zodat je het de volgende keer gewoon uit de lijst kunt kiezen */
+  if(brand==='Anders'&&finalBrand!=='Anders'&&finalModel)eigenErbij(formSoort,finalBrand,finalModel);
   var st=el.dataset.st||'stock';
   var sold=st==='sold', aangekomen=st==='arr', sent=st==='sent'||aangekomen, off=st==='off';
   /* verkocht? dan blijft staan of hij eerder is aangekomen, dat is geschiedenis */
@@ -2603,6 +2653,44 @@ function openSettings(){
      + '<textarea class="in mono" id="s_import" rows="3" placeholder="Plak hier je back-up" style="font-size:12px;margin-top:6px"></textarea>'
      + '<button class="outline quiet" data-act="import">Terugzetten (overschrijft dit boek)</button>'
      + '<div class="note" id="importMsg"></div></div>';
+  }
+
+  /* ── eigen merken en modellen ── */
+  var eigenAantal=0;
+  ['tel','wat'].forEach(function(srt){
+    var e=(S.eigen||{})[srt]||{};
+    Object.keys(e).forEach(function(m){eigenAantal+=(e[m]||[]).length});
+  });
+  h+=secRij('eigen','Eigen merken en modellen',eigenAantal?(eigenAantal+''):'geen','');
+  if(ui.sec.eigen){
+    h+='<div class="secin">';
+    if(!eigenAantal){
+      h+='<div class="note" style="margin-top:10px">Nog niets van jezelf. Komt er een nieuw model uit, '
+       + 'tik dan bij <b>Type</b> op <b>+ nieuw model</b>. Hij komt hier te staan en gaat mee in je back-up, '
+       + 'dus je hoeft niet te wachten op een nieuwe versie van de app.</div>';
+    } else {
+      h+='<div class="note" style="margin-top:10px">Deze heb je zelf toegevoegd. Ze staan in je eigen boek '
+       + 'en gaan mee in je back-up. Weghalen kan alleen als geen enkel toestel hem gebruikt.</div>';
+      ['tel','wat'].forEach(function(srt){
+        var e=(S.eigen||{})[srt]||{};
+        Object.keys(e).forEach(function(m){
+          (e[m]||[]).forEach(function(mod){
+            var inGebruik=S.items.filter(function(x){
+              return soortVan(x)===srt&&x.brand===m&&x.model===mod;
+            }).length;
+            h+='<div class="dl"><div><div class="nm">'+esc(m)+' '+esc(mod)+'</div>'
+             + '<div class="dsub">'+(srt==='wat'?'horloge':'telefoon')
+             + (inGebruik?(' &middot; '+inGebruik+' in je boek'):'')+'</div></div>'
+             + '<div class="val">'
+             + (inGebruik
+                ? '<span class="dim" style="font-size:12px">in gebruik</span>'
+                : '<button class="sortbtn" data-act="eigenweg" data-s="'+srt+'" data-m="'+esc(m)+'" data-t="'+esc(mod)+'">weghalen</button>')
+             + '</div></div>';
+          });
+        });
+      });
+    }
+    h+='</div>';
   }
 
   /* ── foto's ── */
@@ -3190,6 +3278,7 @@ function zetTerug(tekst,foutmelding){
   if(Array.isArray(d.zendingen))S.zendingen=d.zendingen;
   if(Array.isArray(d.kas))S.kas=d.kas;
   if(d.deel)S.deel=d.deel;
+  if(d.eigen)S.eigen=d.eigen;
   if(d.rate)S.rate=d.rate;
   if(d.checks)S.checks=d.checks;
   if(d.checkBrand)S.checkBrand=d.checkBrand;
@@ -3248,7 +3337,7 @@ function openReceipt(id){
 /* Alles wat geld voorstelt gaat mee in de back-up. Voeg je hier iets toe,
    zet het dan ook in zetTerug(), anders ben je het kwijt bij terugzetten. */
 function backupText(){return JSON.stringify({v:1,rate:S.rate,items:S.items,zendingen:S.zendingen,
-  kas:S.kas||[],deel:S.deel||{},checks:S.checks||{},checkBrand:S.checkBrand,checkSoort:S.checkSoort})}
+  kas:S.kas||[],deel:S.deel||{},eigen:S.eigen||{},checks:S.checks||{},checkBrand:S.checkBrand,checkSoort:S.checkSoort})}
 
 /* Op een iPhone-app werkt opslaan als bestand niet. Delen wel. */
 function shareBackup(btn){
@@ -3347,6 +3436,46 @@ document.addEventListener('click',function(e){
   if(act==='tab'){ui.tab=b.dataset.k;ui.payFor=null;render();return}
   if(act==='sort'){ui.sort=b.dataset.k;render();return}
   if(act==='new'){openSnel();return}
+  if(act==='modelplus'){
+    var waar=b.dataset.waar==='snel'?'snel':'f';
+    var vak=document.getElementById(waar+'_nieuw');
+    if(!vak)return;
+    if(vak.innerHTML){vak.innerHTML='';return}
+    vak.innerHTML='<div class="mini"><input id="'+waar+'_nieuwnaam" placeholder="bv. 17 Pro Max">'
+     + '<button class="ok" data-act="modelok" data-waar="'+b.dataset.waar+'">Erbij</button></div>'
+     + '<div class="hint" style="margin-top:6px">Komt in je eigen boek te staan en gaat mee in je back-up.</div>';
+    var inp=document.getElementById(waar+'_nieuwnaam');
+    if(inp){
+      inp.focus();
+      inp.addEventListener('keydown',function(ev){
+        if(ev.key==='Enter'){ev.preventDefault();
+          var kn=document.querySelector('[data-act="modelok"]');
+          if(kn)kn.click();}
+      });
+    }
+    return;
+  }
+  if(act==='modelok'){
+    var w2=b.dataset.waar==='snel'?'snel':'f';
+    var inp2=document.getElementById(w2+'_nieuwnaam');
+    var naam=inp2?String(inp2.value||'').trim():'';
+    if(!naam){if(inp2){inp2.focus();inp2.placeholder='vul een naam in'}return}
+    var srt=(w2==='snel')?snelSoort:formSoort;
+    var msel=document.getElementById(w2==='snel'?'snel_brand':'f_brand');
+    var merk=msel?msel.value:'';
+    if(merk==='Anders'){if(inp2){inp2.placeholder='kies eerst een merk'}return}
+    eigenErbij(srt,merk,naam);
+    /* de lijst opnieuw tekenen en meteen op het nieuwe model zetten */
+    if(w2==='snel'){
+      snelTekenType();
+      var ms=document.getElementById('snel_model'); if(ms)ms.value=naam;
+    } else {
+      var huidig=document.getElementById('f_brand');
+      if(huidig)huidig.dispatchEvent(new Event('change'));
+      var ms2=document.getElementById('f_model'); if(ms2)ms2.value=naam;
+    }
+    return;
+  }
   if(act==='snelok'){
     var n1=snelBewaar();
     if(!n1)return;
@@ -3502,6 +3631,16 @@ document.addEventListener('click',function(e){
   if(act==='check'){openCheck();return}
   if(act==='uitleg'){openUitleg();return}
   if(act==='sec'){ui.sec[b.dataset.v]=!ui.sec[b.dataset.v];openSettings();return}
+  if(act==='eigenweg'){
+    var srt=b.dataset.s==='wat'?'wat':'tel', mk=b.dataset.m, md=b.dataset.t;
+    var e=eigenVan(srt);
+    if(e[mk]){
+      e[mk]=e[mk].filter(function(x){return x!==md});
+      if(!e[mk].length)delete e[mk];
+    }
+    save(); openSettings();
+    return;
+  }
   if(act==='zoekaan'){
     ui.zoekOpen=!ui.zoekOpen;
     if(!ui.zoekOpen)ui.q='';

@@ -71,6 +71,12 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   behalve IMEI, accu en alles wat met verkopen te maken heeft
 - Een uitlegscherm in de instellingen: hoe inkoop, doorgegeven prijs, kosten
   en de twee winsten samenhangen, met een voorbeeld
+- Zelf modellen toevoegen: bij Type staat een plusje. Komt er een
+  nieuwe telefoon uit, dan zet je die er zelf bij — hij komt in je eigen boek
+  en gaat mee in je back-up, dus je hoeft niet op een nieuwe versie te wachten.
+  Wat je via het merk Anders intypt wordt ook onthouden. In de
+  instellingen zie je je eigen toevoegingen en kun je ze weghalen zolang geen
+  toestel ze gebruikt
 - Snel toevoegen: de knop onderin opent een kort scherm met vier dingen —
   telefoon of horloge, merk, type en wat je betaalde. Drie knoppen met een
   icoon: opslaan, opslaan en nog een, of meer invullen. De rest vul je later
@@ -131,7 +137,8 @@ Exporteren gaat via Instellingen -> Foto's exporteren naar een map:
 Toestellen, zendingen, de koers, de inleg-boekingen, de controlelijst en de
 keuze van wat je doorgeeft. Voeg je in de code iets toe dat geld voorstelt,
 zet het dan in `backupText()` **en** in `zetTerug()` — anders ben je het bij
-het terugzetten kwijt.
+het terugzetten kwijt. Dat geldt ook voor de herstelpunten in de app
+(`snapshotBij()`): sinds v42 nemen die de inleg en opnames mee, daarvoor niet.
 
 ## Nooit in deze repo
 
