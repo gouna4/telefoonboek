@@ -445,7 +445,7 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='42', VERSIEDATUM='november 2026';
+var VERSIE='43', VERSIEDATUM='november 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[],eigen:{}};
 var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',kas:null,kasDel:'',payEdit:null,uit:{},stilOff:false,dubbel:'',zoekOpen:false,sec:{},resFor:null,resNaam:'',resVal:'',resCur:'MAD'};
@@ -1069,8 +1069,33 @@ function potVan(wie){
 /* Wat er nu in toestellen zit is samen van jullie. Wat je collega erin heeft
    zitten vul je zelf in; de rest is van jou. Meer is het niet: geen historie,
    geen schattingen, en het telt altijd op tot wat er in de toestellen zit. */
-function mijnInlegEUR(){return Math.max(0, totals().invest - potVan('hij'))}
-function potSamen(){return mijnInlegEUR()+potVan('hij')}
+/* Haalt hij er meer uit dan hij ooit heeft ingelegd, dan is dat geen geld
+   van jou maar een voorschot op zijn helft van de winst. Zijn inleg stopt dus
+   bij nul, jouw inleg blijft gelijk, en het meerdere gaat van zijn winst af. */
+function zijnInlegEUR(){return Math.max(0, potVan('hij'))}
+function zijnWinstUitEUR(){return Math.max(0, -potVan('hij'))}
+function mijnInlegEUR(){return Math.max(0, totals().invest - zijnInlegEUR())}
+function potSamen(){return mijnInlegEUR()+zijnInlegEUR()}
+/* zijn helft van de winst, wat hij daarvan al heeft opgenomen en wat er nog over is */
+function zijnWinstBlok(){
+  var uit=zijnWinstUitEUR();
+  if(uit<0.005)return '';
+  var deel=totals().onze/2, rest=deel-uit;
+  function rij(k,v,kleur,vet){
+    return '<div class="row" style="margin-top:6px"><span class="dim" style="font-size:13px">'+k+'</span>'
+     + '<span class="r"'+(kleur?' style="color:'+kleur+'"':'')+'>'+(vet?'<b>':'')+v+(vet?'</b>':'')+'</span></div>';
+  }
+  return '<div class="soldbox" style="margin-top:14px">'
+   + '<div class="label" style="margin-top:0">Van zijn winst opgenomen</div>'
+   + rij('Zijn helft van de winst', mad(deel*S.rate)+' &middot; '+eur(deel))
+   + rij('Al opgenomen boven zijn inleg', '&minus; '+mad(uit*S.rate)+' &middot; '+eur(uit), 'var(--clay)')
+   + (rest>=-0.005
+      ? rij('Nog tegoed', mad(rest*S.rate)+' &middot; '+eur(rest), 'var(--mint)', true)
+      : rij('Te veel opgenomen', mad(-rest*S.rate)+' &middot; '+eur(-rest), 'var(--clay)', true))
+   + '<div class="hint" style="margin-top:8px">Hij heeft meer opgenomen dan hij heeft ingelegd. '
+   + 'Dat meerdere gaat van zijn helft van de winst af, niet van jouw inleg.</div>'
+   + '</div>';
+}
 function kasVanItem(id){return (S.kas||[]).filter(function(r){return r.itemId===id})}
 
 var WIENAAM={ik:'Ik',hij:'Hij'};
@@ -1225,6 +1250,15 @@ function render(){
    + '<div style="text-align:right"><div class="k">ieder de helft</div>'
    + '<div class="v2">'+mad(t.onze*S.rate/2)+'</div>'
    + '<div class="s">'+eur(t.onze/2)+' &middot; doorgeven &rsaquo;</div></div></button>'
+   + (function(){
+       var uit=zijnWinstUitEUR();
+       if(uit<0.005)return '';
+       var rest=t.onze/2-uit;
+       return '<button class="metabtn" style="display:flex;justify-content:space-between;width:100%" data-act="inleg">'
+        + '<span>hij nam al '+mad(uit*S.rate)+' van zijn helft op</span>'
+        + '<span style="color:'+(rest>=-0.005?'var(--mint)':'var(--clay)')+'">'
+        + (rest>=-0.005?('nog tegoed '+mad(rest*S.rate)):('te veel '+mad(-rest*S.rate)))+' &rsaquo;</span></button>';
+     })()
    + (t.af>0?('<div class="meta" style="color:var(--clay)"><span>&minus; '+mad(t.afOnze*S.rate)
       +' afgeschreven ('+t.af+' '+(t.af===1?'toestel':'toestellen')+')</span><span></span></div>'):'')
    + '<div class="meta"><span>'+t.verkocht+' verkocht &middot; '+t.bijklant+' bij klant'+(t.af>0?(' &middot; '+t.af+' afgeschreven'):'')+'</span>'
@@ -2406,12 +2440,13 @@ function openDrill(k){
 
   if(k==='invest'){
     /* Van wiens geld zijn die toestellen gekocht? Daarom staat de pot hier. */
-    var mijnPot=mijnInlegEUR(), zijnPot=potVan('hij');
+    var mijnPot=mijnInlegEUR(), zijnPot=zijnInlegEUR();
     h+='<div class="stats" style="margin-top:4px">'
      + '<div class="stat"><div class="k">Mijn inleg</div><div class="v">'+pv(eur(mijnPot))+'</div>'
      + '<div class="s">'+pv(mad(mijnPot*S.rate))+'</div></div>'
      + '<div class="stat"><div class="k">Zijn inleg</div><div class="v">'+eur(zijnPot)+'</div>'
      + '<div class="s">'+mad(zijnPot*S.rate)+'</div></div></div>'
+     + zijnWinstBlok()
      + '<button class="ghost" data-act="inleg">Inleg en opnames &rsaquo;</button>';
 
     var open=S.items.filter(function(x){return !x.sold&&!x.off});
@@ -2904,7 +2939,7 @@ function kasRegel(r){
 }
 
 function openInleg(){
-  var mijn=mijnInlegEUR(), zijn=potVan('hij'), f=ui.kas;
+  var mijn=mijnInlegEUR(), zijn=zijnInlegEUR(), f=ui.kas;
   var h='<div class="sheet"><div class="sheet-in"><div class="shead"><button class="back" data-act="close">&#8249;</button>'
    + '<div class="t">Inleg</div></div>';
 
@@ -2912,7 +2947,8 @@ function openInleg(){
    + '<div class="stat"><div class="k">Mijn inleg</div><div class="v">'+pv(eur(mijn))+'</div>'
    + '<div class="s">'+pv(mad(mijn*S.rate))+'</div></div>'
    + '<div class="stat"><div class="k">Zijn inleg</div><div class="v">'+eur(zijn)+'</div>'
-   + '<div class="s">'+mad(zijn*S.rate)+'</div></div></div>';
+   + '<div class="s">'+mad(zijn*S.rate)+'</div></div></div>'
+   + zijnWinstBlok();
 
 
   var t=totals();
@@ -2941,6 +2977,7 @@ function openInleg(){
      + '<div class="label">Wanneer</div><input class="in" type="date" id="kasdag" value="'+esc(f.dag||today())+'">'
      + '<div class="label">Waarvoor</div>'
      + '<input class="in" id="kasnote" placeholder="bv. via Western Union" value="'+esc(f.note||'')+'">'
+     + (erin?'':'<div class="hint" style="margin-top:8px">Eerst gaat het van zijn inleg af. Wat daarboven uitkomt gaat van zijn helft van de winst af.</div>')
      + '<div class="mini" style="margin-top:14px"><button class="ok" style="flex:1" data-act="kassave">Opslaan</button>'
      + '<button class="no" data-act="kascancel">&times;</button></div>'
      + '</div>';
@@ -2962,7 +2999,8 @@ function openInleg(){
   }
 
   h+='<div class="note">Inleg is geld dat je erin stopt, geen winst. Het telt dus niet mee in Mijn winst of in '
-   + 'Onze winst samen. Zo zie je apart hoeveel van jouw eigen geld er nog in de handel zit, en hoeveel van hem.</div>';
+   + 'Onze winst samen. Zo zie je apart hoeveel van jouw eigen geld er nog in de handel zit, en hoeveel van hem. '
+   + 'Haalt hij er meer uit dan hij heeft ingelegd, dan gaat het meerdere van zijn helft van de winst af.</div>';
 
   h+='</div><div class="sbar"><div class="sbar-in"><button class="save" data-act="close">Klaar</button></div></div></div>';
   toonSheet(h);

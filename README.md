@@ -49,6 +49,10 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   dat hij stuurt zet je erbij, geld dat hij uit een verkoop haalt eraf, ook
   met een knop op de kaart van dat toestel. Op die kaart zie je later terug
   wat eruit gehaald is. Te vinden onder Geïnvesteerd
+- Haalt je collega er meer uit dan hij heeft ingelegd, dan stopt zijn inleg
+  bij nul en gaat het meerdere van zijn helft van de winst af, niet van jouw
+  inleg. Onder de winst samen en bij Inleg zie je wat hij al heeft opgenomen
+  en wat hij nog tegoed heeft
 - De lijst staat ingeklapt: per toestel zie je naam, stand en één bedrag — de
   minimumprijs als je hem nog hebt, je winst als hij verkocht is, het verlies
   als hij afgeschreven is. Tik op de naam om alles te zien. Blijft er na
