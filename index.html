@@ -71,6 +71,11 @@ input,select,textarea{font-family:inherit;font-size:16px}
   border:1px solid var(--azure);border-radius:18px;padding:14px 16px;margin-top:12px;
   display:flex;align-items:flex-start;justify-content:space-between;gap:12px;width:100%;text-align:left;
   min-height:44px}
+.band{flex-wrap:wrap}
+/* onderaan in de balk: wat hij al van zijn helft heeft opgenomen */
+.band .voet{width:100%;border-top:1px dashed var(--line);margin-top:2px;padding-top:10px;
+  display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12px;color:var(--dim);line-height:1.5}
+.band .voet b{font-weight:600}
 .band .v2{font-family:var(--mono);font-size:17px;font-weight:600;margin-top:8px;letter-spacing:-.03em;
   color:var(--azure)}
 .band:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--azure)}
@@ -445,7 +450,7 @@ function soortNaam(srt){return srt==='wat'?'horloge':'telefoon'}
 
 /* Het versienummer staat hier, en verder alleen nog in sw.js. Verhoog beide,
    anders ziet de app zijn eigen wijziging niet. */
-var VERSIE='43', VERSIEDATUM='november 2026';
+var VERSIE='44', VERSIEDATUM='november 2026';
 
 var S={rate:10.3,items:[],checks:{},checkBrand:'iPhone',checkAt:'',pin:'',hide:false,snaps:[],zendingen:[],deel:{},kas:[],eigen:{}};
 var ui={tab:'all',q:'',payFor:null,payCur:'',payVal:'',msg:'',tipOff:false,lang:'ar',tips:false,bkOff:false,sort:'nieuw',zdel:'',kas:null,kasDel:'',payEdit:null,uit:{},stilOff:false,dubbel:'',zoekOpen:false,sec:{},resFor:null,resNaam:'',resVal:'',resCur:'MAD'};
@@ -1249,16 +1254,17 @@ function render(){
    + '<div class="s">'+eur(t.onze)+'</div></div>'
    + '<div style="text-align:right"><div class="k">ieder de helft</div>'
    + '<div class="v2">'+mad(t.onze*S.rate/2)+'</div>'
-   + '<div class="s">'+eur(t.onze/2)+' &middot; doorgeven &rsaquo;</div></div></button>'
+   + '<div class="s">'+eur(t.onze/2)+' &middot; doorgeven &rsaquo;</div></div>'
    + (function(){
        var uit=zijnWinstUitEUR();
        if(uit<0.005)return '';
-       var rest=t.onze/2-uit;
-       return '<button class="metabtn" style="display:flex;justify-content:space-between;width:100%" data-act="inleg">'
-        + '<span>hij nam al '+mad(uit*S.rate)+' van zijn helft op</span>'
-        + '<span style="color:'+(rest>=-0.005?'var(--mint)':'var(--clay)')+'">'
-        + (rest>=-0.005?('nog tegoed '+mad(rest*S.rate)):('te veel '+mad(-rest*S.rate)))+' &rsaquo;</span></button>';
+       var rest=t.onze/2-uit, goed=rest>=-0.005;
+       return '<div class="voet"><div>hij al opgenomen<br><b style="color:var(--clay)">&minus; '+mad(uit*S.rate)+'</b></div>'
+        + '<div style="text-align:right">'+(goed?'nog tegoed':'te veel opgenomen')+'<br>'
+        + '<b style="color:'+(goed?'var(--mint)':'var(--clay)')+'">'+mad(Math.abs(rest)*S.rate)+'</b>'
+        + ' &middot; '+eur(Math.abs(rest))+'</div></div>';
      })()
+   + '</button>'
    + (t.af>0?('<div class="meta" style="color:var(--clay)"><span>&minus; '+mad(t.afOnze*S.rate)
       +' afgeschreven ('+t.af+' '+(t.af===1?'toestel':'toestellen')+')</span><span></span></div>'):'')
    + '<div class="meta"><span>'+t.verkocht+' verkocht &middot; '+t.bijklant+' bij klant'+(t.af>0?(' &middot; '+t.af+' afgeschreven'):'')+'</span>'

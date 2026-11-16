@@ -51,7 +51,7 @@ Deze bestanden zijn leeg: wie de site opent, krijgt een leeg boek.
   wat eruit gehaald is. Te vinden onder Geïnvesteerd
 - Haalt je collega er meer uit dan hij heeft ingelegd, dan stopt zijn inleg
   bij nul en gaat het meerdere van zijn helft van de winst af, niet van jouw
-  inleg. Onder de winst samen en bij Inleg zie je wat hij al heeft opgenomen
+  inleg. In de balk Onze winst samen en bij Inleg zie je wat hij al heeft opgenomen
   en wat hij nog tegoed heeft
 - De lijst staat ingeklapt: per toestel zie je naam, stand en één bedrag — de
   minimumprijs als je hem nog hebt, je winst als hij verkocht is, het verlies
