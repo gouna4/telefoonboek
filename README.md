@@ -149,6 +149,15 @@ het terugzetten kwijt. Dat geldt ook voor de herstelpunten in de app
 Het back-upbestand uit de instellingen (`telefoonboek-JJJJ-MM-DD.json`).
 Daarin staan klantnamen, echte inkoopprijzen en openstaande bedragen.
 
+Twee beveiligingen:
+
+- `.gitignore` laat Git en SourceTree back-ups overslaan. Uploaden via de
+  GitHub-website kijkt daar niet naar.
+- `.github/workflows/website.yml` zet alleen `index.html`, `sw.js`,
+  `manifest.json` en de icoontjes op de website. Staat er een `.json` (behalve
+  `manifest.json`), `.csv` of `.xlsx` in de repo, dan stopt hij, blijft de
+  website zoals hij was en stuurt GitHub een mail. Haal het bestand dan meteen weg.
+
 ## Let op
 
 De gegevens hangen aan het webadres. Verhuis je de app naar een ander adres,
